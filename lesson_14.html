@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Write automated tests in C# with xUnit: test projects, Facts and Theories, the Arrange-Act-Assert pattern, and testing exceptions.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 5.2: Unit Testing - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 5: Real-World C# and Quality</a></li>
+            <li aria-current="page">Lesson 5.2: Unit Testing</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 5.2: Unit Testing</h1>
+                <p class="lead">How do you know your code actually works — and keeps working as you change it? You write <strong>tests</strong>: small programs that automatically check your code and shout if anything breaks. This is how professionals build with confidence.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what unit testing is and why it's valuable</li>
+                        <li>Create a test project and run tests with <code>dotnet test</code></li>
+                        <li>Write tests with xUnit's <code>[Fact]</code> and <code>[Theory]</code></li>
+                        <li>Structure tests with the Arrange-Act-Assert pattern</li>
+                        <li>Assert results, including that code throws the right exception</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Write a suite of unit tests for a small class.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is Unit Testing?</a></li>
+                        <li><a href="#setup" class="toc-link">Setting Up a Test Project</a></li>
+                        <li><a href="#first-test" class="toc-link">Your First Test (AAA)</a></li>
+                        <li><a href="#asserts" class="toc-link">Common Assertions</a></li>
+                        <li><a href="#theory" class="toc-link">Data-Driven Tests</a></li>
+                        <li><a href="#exceptions" class="toc-link">Testing Exceptions</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is unit testing -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is Unit Testing?</h2>
+                <p>A <strong>unit test</strong> is a small, automated check that verifies one piece of your code — usually a single method — does what it should. You run your whole suite of tests in seconds, and each one either passes or fails.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Unit test:</strong> code that calls a "unit" (typically a method) with known inputs and asserts that the output matches what you expect. Many tests together form a <em>test suite</em>.</p>
+                </div>
+
+                <p>Why bother, when you could just run the program and eyeball it?</p>
+                <ul>
+                    <li><strong>Confidence to change code.</strong> After editing, run the tests; if they still pass, you probably didn't break anything.</li>
+                    <li><strong>Catch regressions.</strong> A bug you fix once, you write a test for — so it can never silently return.</li>
+                    <li><strong>Living documentation.</strong> Tests show exactly how code is meant to behave.</li>
+                    <li><strong>Better design.</strong> Code that's easy to test tends to be well-structured (small, focused methods).</li>
+                </ul>
+
+                <div class="mermaid">
+                    graph LR
+                    A["Write / change code"] --> B["Run tests"]
+                    B --> C{"All pass?"}
+                    C -->|"Yes"| D["Ship with confidence"]
+                    C -->|"No"| E["Fix the code"]
+                    E --> B
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style D fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 2: Setup -->
+            <section id="setup" class="lesson-section">
+                <h2>Setting Up a Test Project</h2>
+                <p>Tests live in their own project that references the code being tested. The most popular test framework for C# is <strong>xUnit</strong>. Here's the typical layout and commands:</p>
+
+                <pre><code class="language-bash"># Create the code being tested (a class library)
+dotnet new classlib -o MyApp
+
+# Create an xUnit test project
+dotnet new xunit -o MyApp.Tests
+
+# Let the test project see the app project
+dotnet add MyApp.Tests reference MyApp
+
+# Run all tests
+dotnet test</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 What <code>dotnet test</code> does</h4>
+                    <p>It builds your projects, discovers every test method, runs them, and prints a summary: how many passed, failed, or were skipped. In Visual Studio, the <strong>Test Explorer</strong> gives the same results with a clickable UI. xUnit isn't the only choice (NUnit and MSTest are similar) — the concepts here transfer to all of them.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: First test -->
+            <section id="first-test" class="lesson-section">
+                <h2>Your First Test (Arrange-Act-Assert)</h2>
+                <p>Say we're testing this simple class in the <code>MyApp</code> project:</p>
+                <pre><code class="language-csharp">public class Calculator
+{
+    public int Add(int a, int b) =&gt; a + b;
+}</code></pre>
+
+                <p>A test is a method marked with the <code>[Fact]</code> attribute. The body follows the <strong>Arrange-Act-Assert (AAA)</strong> pattern — set up, do the thing, check the result:</p>
+
+                <pre><code class="language-csharp">using Xunit;
+
+public class CalculatorTests
+{
+    [Fact]
+    public void Add_TwoNumbers_ReturnsSum()
+    {
+        // Arrange — set up the objects and inputs
+        var calc = new Calculator();
+
+        // Act — call the method under test
+        int result = calc.Add(3, 4);
+
+        // Assert — verify the result is what we expect
+        Assert.Equal(7, result);
+    }
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Name tests descriptively</h4>
+                    <p>A common convention is <code>MethodName_Scenario_ExpectedResult</code>, like <code>Add_TwoNumbers_ReturnsSum</code>. When a test fails, its name alone should tell you what broke — no need to read the body.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 One behavior per test</h4>
+                    <p>Keep each test focused on a single behavior with (ideally) one assertion. Small, focused tests pinpoint exactly what failed, rather than leaving you guessing which of five checks broke.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Asserts -->
+            <section id="asserts" class="lesson-section">
+                <h2>Common Assertions</h2>
+                <p>The <code>Assert</code> class provides methods to check outcomes. If an assertion is false, the test fails. The ones you'll use most:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Assertion</th><th>Passes when…</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>Assert.Equal(expected, actual)</code></td><td>the two values are equal</td></tr>
+                            <tr><td><code>Assert.True(condition)</code> / <code>Assert.False(...)</code></td><td>the condition is true / false</td></tr>
+                            <tr><td><code>Assert.Null(x)</code> / <code>Assert.NotNull(x)</code></td><td>the value is null / not null</td></tr>
+                            <tr><td><code>Assert.Contains(item, collection)</code></td><td>the collection contains the item</td></tr>
+                            <tr><td><code>Assert.Throws&lt;TException&gt;(() =&gt; ...)</code></td><td>the code throws that exception</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <pre><code class="language-csharp">[Fact]
+public void Assertions_Examples()
+{
+    Assert.Equal(10, 5 + 5);
+    Assert.True(4 % 2 == 0);
+    Assert.NotNull("hello");
+
+    var list = new List&lt;int&gt; { 1, 2, 3 };
+    Assert.Contains(2, list);
+}</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Argument order for <code>Assert.Equal</code></h4>
+                    <p>The <strong>expected</strong> value comes first, the <strong>actual</strong> value second: <code>Assert.Equal(expected, actual)</code>. Getting them backwards still works, but failure messages ("expected X but got Y") will read confusingly.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Theory -->
+            <section id="theory" class="lesson-section">
+                <h2>Data-Driven Tests</h2>
+                <p>Often you want to test the same logic with many inputs. Instead of copying a <code>[Fact]</code> repeatedly, use a <code>[Theory]</code> with <code>[InlineData]</code> — the test runs once per data row:</p>
+
+                <pre><code class="language-csharp">public class MathTests
+{
+    [Theory]
+    [InlineData(2, 3, 5)]
+    [InlineData(0, 0, 0)]
+    [InlineData(-1, 1, 0)]
+    [InlineData(100, 200, 300)]
+    public void Add_VariousInputs_ReturnsSum(int a, int b, int expected)
+    {
+        var calc = new Calculator();
+        int result = calc.Add(a, b);
+        Assert.Equal(expected, result);
+    }
+}</code></pre>
+
+                <p>This counts as <strong>four</strong> separate tests — each row is reported individually, so you can see exactly which input failed.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Test the edges</h4>
+                    <p>Good test data covers more than the happy path: include zero, negatives, empty collections, boundary values, and other edge cases. Bugs love the edges — that's where careful tests earn their keep.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Testing exceptions -->
+            <section id="exceptions" class="lesson-section">
+                <h2>Testing Exceptions</h2>
+                <p>Sometimes correct behavior is <em>throwing</em> an exception — like rejecting invalid input (Lesson 1.1). Verify that with <code>Assert.Throws&lt;T&gt;</code>, which passes only if the code throws the expected type:</p>
+
+                <pre><code class="language-csharp">public class BankAccount
+{
+    public decimal Balance { get; private set; }
+
+    public void Withdraw(decimal amount)
+    {
+        if (amount &gt; Balance)
+        {
+            throw new InvalidOperationException("Insufficient funds.");
+        }
+        Balance -= amount;
+    }
+}
+
+public class BankAccountTests
+{
+    [Fact]
+    public void Withdraw_MoreThanBalance_Throws()
+    {
+        // Arrange
+        var account = new BankAccount();   // balance starts at 0
+
+        // Act &amp; Assert — the withdrawal should throw
+        Assert.Throws&lt;InvalidOperationException&gt;(() =&gt; account.Withdraw(100m));
+    }
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Test both success and failure</h4>
+                    <p>For any method with rules, write tests for the cases that should <em>work</em> and the cases that should <em>fail</em>. A method is only fully covered when you've verified it does the right thing <em>and</em> refuses to do the wrong thing.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Testable code = good code</h4>
+                    <p>Notice these tests are easy because the methods are small, take clear inputs, and return clear outputs. If a method is hard to test (it depends on the clock, the network, or hidden state), that's often a sign it should be refactored — testing pressure nudges you toward cleaner design.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: Test a StringUtils Class</h3>
+                    <p><strong>Objective:</strong> Write a small class and a suite of tests covering normal cases, edge cases, and an exception.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Set up a class library and an xUnit test project (see the setup commands above).</li>
+                        <li>In the library, write a <code>StringUtils</code> class with <code>string Reverse(string input)</code> that returns the reversed string, and throws <code>ArgumentNullException</code> if <code>input</code> is null.</li>
+                        <li>Write a <code>[Fact]</code> that reverses <code>"hello"</code> to <code>"olleh"</code>.</li>
+                        <li>Write a <code>[Theory]</code> with several inputs (including an empty string and a single character).</li>
+                        <li>Write a <code>[Fact]</code> asserting that <code>Reverse(null)</code> throws <code>ArgumentNullException</code>.</li>
+                        <li>Run <code>dotnet test</code> and confirm all tests pass.</li>
+                    </ol>
+
+                    <h4>Starter Code (the class):</h4>
+                    <pre><code class="language-csharp">public class StringUtils
+{
+    public string Reverse(string input)
+    {
+        if (input is null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
+        char[] chars = input.ToCharArray();
+        Array.Reverse(chars);
+        return new string(chars);
+    }
+}</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Reverse test: <code>Assert.Equal("olleh", new StringUtils().Reverse("hello"));</code>. For the theory, rows like <code>[InlineData("", "")]</code> and <code>[InlineData("a", "a")]</code>. For the exception: <code>Assert.Throws&lt;ArgumentNullException&gt;(() =&gt; new StringUtils().Reverse(null!));</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution (the tests)</summary>
+                        <pre><code class="language-csharp">using Xunit;
+
+public class StringUtilsTests
+{
+    [Fact]
+    public void Reverse_Word_ReturnsReversed()
+    {
+        var utils = new StringUtils();
+        Assert.Equal("olleh", utils.Reverse("hello"));
+    }
+
+    [Theory]
+    [InlineData("", "")]
+    [InlineData("a", "a")]
+    [InlineData("ab", "ba")]
+    [InlineData("racecar", "racecar")]
+    public void Reverse_VariousInputs_Works(string input, string expected)
+    {
+        var utils = new StringUtils();
+        Assert.Equal(expected, utils.Reverse(input));
+    }
+
+    [Fact]
+    public void Reverse_Null_ThrowsArgumentNull()
+    {
+        var utils = new StringUtils();
+        Assert.Throws&lt;ArgumentNullException&gt;(() =&gt; utils.Reverse(null!));
+    }
+}</code></pre>
+                        <p>Running <code>dotnet test</code> reports all tests (1 + 4 + 1 = 6) passing:</p>
+                        <pre><code>Passed!  - Failed: 0, Passed: 6, Skipped: 0</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What do the three A's in Arrange-Act-Assert stand for?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Arrange the inputs, Act by calling the method, Assert the result.">
+                                A) Set up inputs, call the method, then check the result.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Tests don't have those phases.">
+                                B) Allocate, Analyze, Archive.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That's not the AAA testing pattern.">
+                                C) Add, Average, Aggregate.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> When would you use <code>[Theory]</code> with <code>[InlineData]</code> instead of <code>[Fact]</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! A Theory runs the same test logic once per data row, great for many inputs.">
+                                A) To run the same test with several different sets of inputs.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Both are real xUnit test types; Theory isn't 'fake'.">
+                                B) When you want the test to always pass.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Exceptions are tested with Assert.Throws, not Theory specifically.">
+                                C) Only when testing for exceptions.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> How do you verify that a method throws an exception?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Assert.Equal checks values, not thrown exceptions.">
+                                A) <code>Assert.Equal(exception, result)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Assert.Throws<T>(() => ...) passes only if the code throws that exception type.">
+                                B) <code>Assert.Throws&lt;TException&gt;(() =&gt; code)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A test doesn't need its own try/catch to check for exceptions — use Assert.Throws.">
+                                C) Wrap it in <code>try</code>/<code>catch</code> and hope.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Unit tests</strong> are automated checks that verify a piece of code; they give you confidence to change code and catch regressions.</li>
+                        <li>Tests live in their own project (e.g. xUnit); run them with <code>dotnet test</code>.</li>
+                        <li>Mark tests with <code>[Fact]</code> and structure them <strong>Arrange-Act-Assert</strong>; name them descriptively.</li>
+                        <li>Assert outcomes with <code>Assert.Equal</code>, <code>Assert.True</code>, <code>Assert.Throws&lt;T&gt;</code>, etc. (expected value first).</li>
+                        <li>Use <code>[Theory]</code> + <code>[InlineData]</code> for many inputs; test edge cases and failure paths, not just the happy path.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/core/testing/" target="_blank" rel="noopener">Testing in .NET — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/core/testing/unit-testing-with-dotnet-test" target="_blank" rel="noopener">Unit testing C# with xUnit — tutorial</a></li>
+                    <li><a href="https://xunit.net/" target="_blank" rel="noopener">xUnit.net — official site</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You now have every tool for professional C#. In the final lesson, <strong>Lesson 5.3: Capstone Project</strong>, you'll combine exceptions, generics, LINQ, records, files, JSON, async, web APIs, and tests into one complete application — the grand finale of the course.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 You test like a pro!</h3>
+                    <p>Automated tests are what separate hobby code from professional code. One lesson to go — the capstone!</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_13.html" class="prev-lesson">← Previous: Lesson 5.1 — Calling Web APIs with HttpClient</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_15.html" class="next-lesson">Next: Lesson 5.3 — Capstone Project →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

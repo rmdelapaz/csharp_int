@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Keep C# apps responsive with async and await: Tasks, awaiting slow work, running operations concurrently, and common pitfalls.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 4.3: Asynchronous Programming - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 4: Data and I/O</a></li>
+            <li aria-current="page">Lesson 4.3: Asynchronous Programming</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 4.3: Asynchronous Programming</h1>
+                <p class="lead">Some work is slow: reading a big file, calling a website, querying a database. Async programming lets your app do that slow work <em>without freezing</em> — staying responsive and even doing several things at once.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what asynchronous programming solves and what a <code>Task</code> is</li>
+                        <li>Write and call <code>async</code> methods with <code>await</code></li>
+                        <li>Return values from async methods with <code>Task&lt;T&gt;</code></li>
+                        <li>Run multiple operations concurrently with <code>Task.WhenAll</code></li>
+                        <li>Avoid the common async pitfalls</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 75 minutes</p>
+                    <p><strong>Project:</strong> Write async methods that simulate slow work and run them concurrently.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">Why Async?</a></li>
+                        <li><a href="#task" class="toc-link">Tasks</a></li>
+                        <li><a href="#async-await" class="toc-link">async and await</a></li>
+                        <li><a href="#returning" class="toc-link">Returning Values</a></li>
+                        <li><a href="#concurrent" class="toc-link">Running Work Concurrently</a></li>
+                        <li><a href="#pitfalls" class="toc-link">Common Pitfalls</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: Why async -->
+            <section id="introduction" class="lesson-section">
+                <h2>Why Async?</h2>
+                <p>Most slow operations aren't slow because your CPU is busy — they're slow because your program is <em>waiting</em>: for a disk, a network response, a database. In <strong>synchronous</strong> code, that waiting <strong>blocks</strong> the thread; nothing else can happen until it finishes. A UI would freeze; a server could handle far fewer requests.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Asynchronous programming:</strong> a way to start a slow operation and let your program continue (or free the thread for other work) until the result is ready — instead of blocking while it waits.</p>
+                </div>
+
+                <p>The analogy: at a restaurant, a good waiter takes your order, then serves other tables while the kitchen cooks — rather than standing frozen at your table until your food is ready. Async lets one thread serve many "tables."</p>
+
+                <div class="mermaid">
+                    graph TD
+                    subgraph Sync["Synchronous — blocks"]
+                    A1["Start slow call"] --> A2["WAIT (frozen)"] --> A3["Continue"]
+                    end
+                    subgraph Async["Asynchronous — frees the thread"]
+                    B1["Start slow call"] --> B2["Do other work<br/>while waiting"] --> B3["Resume when ready"]
+                    end
+                    style A2 fill:#ffebee,stroke:#c62828,stroke-width:2px
+                    style B2 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 2: Task -->
+            <section id="task" class="lesson-section">
+                <h2>Tasks</h2>
+                <p>A <strong><code>Task</code></strong> represents an operation that's <em>in progress</em> or will complete in the future — a promise of "this work is happening; here's a handle to it."</p>
+                <ul>
+                    <li><code>Task</code> — an async operation that returns <strong>no value</strong> (the async equivalent of <code>void</code>).</li>
+                    <li><code>Task&lt;T&gt;</code> — an async operation that will produce a value of type <code>T</code> (the generic type from Lesson 1.2).</li>
+                </ul>
+
+                <p>Many .NET methods that do slow I/O come in async versions that return a <code>Task</code>, conventionally suffixed with <code>Async</code>. For example, the file methods from Lesson 4.1 have async twins:</p>
+                <pre><code class="language-csharp">// Synchronous (blocks): string text = File.ReadAllText("big.txt");
+// Asynchronous (returns a Task&lt;string&gt;):
+Task&lt;string&gt; readTask = File.ReadAllTextAsync("big.txt");</code></pre>
+
+                <p>That <code>readTask</code> is the operation in flight. To get its result, you <code>await</code> it — our next topic.</p>
+            </section>
+
+            <!-- Section 3: async/await -->
+            <section id="async-await" class="lesson-section">
+                <h2><code>async</code> and <code>await</code></h2>
+                <p>Two keywords make async code read almost like ordinary sequential code:</p>
+                <ul>
+                    <li><code>async</code> marks a method as asynchronous, allowing <code>await</code> inside it.</li>
+                    <li><code>await</code> pauses the method until the awaited <code>Task</code> completes, then continues — <em>without blocking the thread</em> while waiting.</li>
+                </ul>
+
+                <pre><code class="language-csharp">async Task GreetSlowlyAsync()
+{
+    Console.WriteLine("Starting...");
+    await Task.Delay(1000);            // wait 1 second WITHOUT blocking
+    Console.WriteLine("...done a second later!");
+}</code></pre>
+
+                <p><code>Task.Delay</code> is a handy stand-in for "some slow work." Because we <code>await</code> it, the thread is free during that second. Crucially, <code>await</code> <em>unwraps</em> the task: awaiting a <code>Task&lt;string&gt;</code> gives you a <code>string</code>:</p>
+
+                <pre><code class="language-csharp">async Task ShowFileAsync()
+{
+    string text = await File.ReadAllTextAsync("notes.txt");   // await → string
+    Console.WriteLine(text);
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 "Async all the way"</h4>
+                    <p>A method that uses <code>await</code> must itself be <code>async</code> and return <code>Task</code> (or <code>Task&lt;T&gt;</code>). The caller then awaits <em>it</em>, and so on up the chain. Modern C# even lets your program's top-level code use <code>await</code> directly, and a method's entry point can be <code>async Task Main</code>.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Returning values -->
+            <section id="returning" class="lesson-section">
+                <h2>Returning Values</h2>
+                <p>An async method that produces a result declares its return type as <code>Task&lt;T&gt;</code>, but inside you just <code>return</code> the <code>T</code> — the compiler wraps it in a task for you:</p>
+
+                <pre><code class="language-csharp">async Task&lt;int&gt; CalculateSlowlyAsync(int a, int b)
+{
+    await Task.Delay(500);      // pretend this takes time
+    return a + b;               // return an int; caller gets Task&lt;int&gt;
+}
+
+// Calling it:
+int sum = await CalculateSlowlyAsync(3, 4);
+Console.WriteLine(sum);         // 7</code></pre>
+
+                <p>From the caller's perspective, <code>await CalculateSlowlyAsync(3, 4)</code> reads just like a normal method call that returns an <code>int</code> — the async machinery stays out of your way.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Async methods read top-to-bottom</h4>
+                    <p>The beauty of <code>async</code>/<code>await</code> is that your code still reads sequentially — line after line — even though it doesn't block. You get responsiveness without the tangled "callback" style older async approaches required.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Concurrency -->
+            <section id="concurrent" class="lesson-section">
+                <h2>Running Work Concurrently</h2>
+                <p>Awaiting tasks one after another runs them <em>sequentially</em>. If they don't depend on each other, you can start them all and wait for all to finish with <code>Task.WhenAll</code> — often dramatically faster:</p>
+
+                <pre><code class="language-csharp">async Task&lt;string&gt; FetchAsync(string name)
+{
+    await Task.Delay(1000);      // each "fetch" takes ~1 second
+    return $"Data for {name}";
+}
+
+// ❌ Sequential: ~3 seconds total (1 + 1 + 1)
+string a = await FetchAsync("A");
+string b = await FetchAsync("B");
+string c = await FetchAsync("C");
+
+// ✅ Concurrent: ~1 second total — all three run at once
+Task&lt;string&gt;[] tasks =
+{
+    FetchAsync("A"),
+    FetchAsync("B"),
+    FetchAsync("C")
+};
+string[] results = await Task.WhenAll(tasks);
+foreach (string r in results)
+{
+    Console.WriteLine(r);
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Start first, await later</h4>
+                    <p>The trick: calling <code>FetchAsync("A")</code> <em>starts</em> the task immediately; it doesn't finish until awaited. By starting all three before awaiting, they overlap. <code>Task.WhenAll</code> returns when every task is done, giving back an array of results in order.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Pitfalls -->
+            <section id="pitfalls" class="lesson-section">
+                <h2>Common Pitfalls</h2>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Don't block on async with <code>.Result</code> or <code>.Wait()</code></h4>
+                    <p>Calling <code>.Result</code> or <code>.Wait()</code> on a task <em>blocks</em> the thread — defeating the purpose of async, and in some contexts causing a <strong>deadlock</strong> that freezes your app. Always <code>await</code> a task instead of reaching into its <code>.Result</code>.</p>
+                    <pre><code class="language-csharp">// ❌ Blocks (and can deadlock)
+string text = File.ReadAllTextAsync("f.txt").Result;
+
+// ✅ Awaits properly
+string text = await File.ReadAllTextAsync("f.txt");</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Avoid <code>async void</code></h4>
+                    <p>An <code>async</code> method should return <code>Task</code>, not <code>void</code>. With <code>async void</code>, the caller can't <code>await</code> it and exceptions can't be caught normally — they can crash the app. The only common exception is UI event handlers. Rule: <strong>async methods return <code>Task</code></strong>.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Exceptions still work</h4>
+                    <p>Good news: <code>try</code>/<code>catch</code> (Lesson 1.1) works normally with <code>await</code>. If an awaited task throws, the exception surfaces at the <code>await</code>, and you catch it just like synchronous code:</p>
+                    <pre><code class="language-csharp">try
+{
+    string text = await File.ReadAllTextAsync("missing.txt");
+}
+catch (FileNotFoundException)
+{
+    Console.WriteLine("File not found.");
+}</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Naming convention</h4>
+                    <p>By convention, async methods end in <code>Async</code> (<code>ReadAllTextAsync</code>, <code>FetchDataAsync</code>). It signals to callers "this returns a Task you should await."</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: Concurrent Downloads (Simulated)</h3>
+                    <p><strong>Objective:</strong> Write async methods and compare sequential vs. concurrent execution.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>AsyncLab</code>.</li>
+                        <li>Write <code>async Task&lt;string&gt; DownloadAsync(string name)</code> that <code>await Task.Delay(1000)</code> then returns <code>$"Downloaded {name}"</code>.</li>
+                        <li>Call it sequentially for three items (await each in turn) and observe it takes ~3 seconds.</li>
+                        <li>Then start all three and <code>await Task.WhenAll(...)</code> to run them concurrently (~1 second). Print each result.</li>
+                        <li><strong>Bonus:</strong> wrap the concurrent version in <code>try</code>/<code>catch</code>.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">// Top-level code can use await directly.
+
+// TODO: call DownloadAsync three times concurrently with Task.WhenAll
+// TODO: print each result
+
+async Task&lt;string&gt; DownloadAsync(string name)
+{
+    await Task.Delay(1000);
+    return $"Downloaded {name}";
+}</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Start the tasks without awaiting: <code>var t1 = DownloadAsync("A");</code> (and t2, t3). Then <code>string[] results = await Task.WhenAll(t1, t2, t3);</code> and loop over <code>results</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">// Concurrent version
+Task&lt;string&gt; t1 = DownloadAsync("report.pdf");
+Task&lt;string&gt; t2 = DownloadAsync("photo.jpg");
+Task&lt;string&gt; t3 = DownloadAsync("data.csv");
+
+string[] results = await Task.WhenAll(t1, t2, t3);   // ~1 second total
+
+foreach (string r in results)
+{
+    Console.WriteLine(r);
+}
+
+async Task&lt;string&gt; DownloadAsync(string name)
+{
+    await Task.Delay(1000);   // simulate a slow download
+    return $"Downloaded {name}";
+}</code></pre>
+                        <p>Output (after ~1 second, not 3):</p>
+                        <pre><code>Downloaded report.pdf
+Downloaded photo.jpg
+Downloaded data.csv</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does <code>await</code> do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! await pauses the method until the task completes, without blocking the thread, then resumes.">
+                                A) Pauses the method until the task finishes, without blocking the thread.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't freeze the thread — that's the whole point.">
+                                B) Freezes the entire thread until the task finishes.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="await consumes a task; it doesn't cancel it.">
+                                C) Cancels the task immediately.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What should an <code>async</code> method that returns a number declare as its return type?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="An async method wraps its result in a Task.">
+                                A) <code>int</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! It returns Task<int>; inside, you just return the int and the compiler wraps it.">
+                                B) <code>Task&lt;int&gt;</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="void async is discouraged and can't return a value anyway.">
+                                C) <code>void</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> To run three independent async operations at the same time, you should…</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Awaiting each in turn runs them one after another (sequentially).">
+                                A) <code>await</code> each one on its own line, in order.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Start them all, then await Task.WhenAll to let them overlap.">
+                                B) Start them all, then <code>await Task.WhenAll(...)</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Blocking with .Result defeats async and risks deadlocks.">
+                                C) Call <code>.Result</code> on each to force them.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Async programming</strong> lets slow, waiting work (I/O, network) happen without blocking the thread, keeping apps responsive.</li>
+                        <li>A <code>Task</code> represents work in progress; <code>Task&lt;T&gt;</code> represents work that will produce a <code>T</code>.</li>
+                        <li>Mark methods <code>async</code> and use <code>await</code> to pause for a task without blocking; <code>await</code> unwraps a <code>Task&lt;T&gt;</code> into a <code>T</code>.</li>
+                        <li>Return <code>Task</code>/<code>Task&lt;T&gt;</code> from async methods; go "async all the way" and suffix names with <code>Async</code>.</li>
+                        <li>Run independent work concurrently with <code>Task.WhenAll</code>; avoid <code>.Result</code>/<code>.Wait()</code> (blocking/deadlocks) and <code>async void</code>.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/" target="_blank" rel="noopener">Asynchronous programming — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/async-scenarios" target="_blank" rel="noopener">Async in depth &amp; scenarios</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task" target="_blank" rel="noopener">Task — API reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>That completes <strong>Module 4</strong>! Async is the key to our next topic. In <strong>Module 5</strong>, you'll put it to real use: <strong>Lesson 5.1: Calling Web APIs with HttpClient</strong> fetches live data over the internet — asynchronously, of course — and parses the JSON you learned in Lesson 4.2.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Module 4 complete!</h3>
+                    <p>Files, JSON, and async — your programs now handle real-world data. Next: talking to the internet.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_11.html" class="prev-lesson">← Previous: Lesson 4.2 — JSON Serialization</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_13.html" class="next-lesson">Next: Lesson 5.1 — Calling Web APIs with HttpClient →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

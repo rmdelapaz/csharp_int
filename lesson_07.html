@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn C# records: concise data types with built-in value equality, immutability, and with-expressions.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 3.1: Records and Value Equality - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 3: Modern Language Features</a></li>
+            <li aria-current="page">Lesson 3.1: Records and Value Equality</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 3.1: Records and Value Equality</h1>
+                <p class="lead">Records are a concise way to declare types whose job is to <em>hold data</em>. In a single line you get value equality, a readable <code>ToString</code>, immutability, and easy copying — perfect for the data-carrying types you write all the time.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Declare a record, including the concise positional form</li>
+                        <li>Explain value equality and how it differs from a class's reference equality</li>
+                        <li>Use immutability and <code>with</code>-expressions for safe copies</li>
+                        <li>Deconstruct a record into its parts</li>
+                        <li>Decide when to use a record vs. a class</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Model data with records and see value equality in action.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is a Record?</a></li>
+                        <li><a href="#positional" class="toc-link">Positional Records</a></li>
+                        <li><a href="#equality" class="toc-link">Value vs. Reference Equality</a></li>
+                        <li><a href="#immutability" class="toc-link">Immutability and <code>with</code></a></li>
+                        <li><a href="#deconstruction" class="toc-link">Deconstruction</a></li>
+                        <li><a href="#record-vs-class" class="toc-link">Record vs. Class</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is a record -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is a Record?</h2>
+                <p>Many types exist just to bundle a few related values — a <code>Point</code>, a <code>Product</code>, an API response. Writing those as full classes means a lot of boilerplate: properties, a constructor, equality logic, a <code>ToString</code>. A <strong>record</strong> gives you all of that automatically.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Record:</strong> a reference type declared with the <code>record</code> keyword, designed for holding data. Records come with built-in <em>value equality</em>, a helpful <code>ToString</code>, and support for immutability and easy copying.</p>
+                </div>
+
+                <p>Here's a class and the equivalent record. Both hold a name and age — but look at the difference in effort:</p>
+                <pre><code class="language-csharp">// As a class — lots of boilerplate
+class PersonClass
+{
+    public string Name { get; init; }
+    public int Age { get; init; }
+    public PersonClass(string name, int age) { Name = name; Age = age; }
+}
+
+// As a record — one line, and you get MORE (equality + ToString)
+record PersonRecord(string Name, int Age);</code></pre>
+            </section>
+
+            <!-- Section 2: Positional records -->
+            <section id="positional" class="lesson-section">
+                <h2>Positional Records</h2>
+                <p>That one-liner is a <strong>positional record</strong>. The parameters in parentheses become read-only properties automatically, and you get a matching constructor for free:</p>
+
+                <pre><code class="language-csharp">record Product(string Name, string Category, decimal Price);
+
+Product keyboard = new Product("Keyboard", "Electronics", 45m);
+
+Console.WriteLine(keyboard.Name);    // Keyboard
+Console.WriteLine(keyboard.Price);   // 45</code></pre>
+
+                <p>Records also generate a readable <code>ToString</code> out of the box — great for debugging:</p>
+                <pre><code class="language-csharp">Console.WriteLine(keyboard);
+// Product { Name = Keyboard, Category = Electronics, Price = 45 }</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 The <code>record</code> you already met</h4>
+                    <p>This is exactly the <code>Product</code> and <code>Person</code> types from the LINQ lesson. Records are the idiomatic way to declare the small data types you query and pass around — which is why they show up constantly in modern C#.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Value equality -->
+            <section id="equality" class="lesson-section">
+                <h2>Value vs. Reference Equality</h2>
+                <p>This is the headline feature. With a normal <strong>class</strong>, two objects are "equal" only if they're the <em>same object in memory</em> — that's <strong>reference equality</strong>. Two separate class objects with identical data are considered different:</p>
+
+                <pre><code class="language-csharp">class PointClass
+{
+    public int X { get; init; }
+    public int Y { get; init; }
+}
+
+var a = new PointClass { X = 1, Y = 2 };
+var b = new PointClass { X = 1, Y = 2 };
+
+Console.WriteLine(a == b);        // False — different objects in memory
+Console.WriteLine(a.Equals(b));   // False</code></pre>
+
+                <p>A <strong>record</strong> instead compares by <em>the values it holds</em> — <strong>value equality</strong>. Two records with the same data are equal:</p>
+
+                <pre><code class="language-csharp">record PointRecord(int X, int Y);
+
+var c = new PointRecord(1, 2);
+var d = new PointRecord(1, 2);
+
+Console.WriteLine(c == d);        // True — same values!
+Console.WriteLine(c.Equals(d));   // True</code></pre>
+
+                <div class="mermaid">
+                    graph TD
+                    subgraph Class["class → reference equality"]
+                    A1["a: {1, 2}"] -. "a == b?<br/>False" .- B1["b: {1, 2}"]
+                    end
+                    subgraph Record["record → value equality"]
+                    C1["c: (1, 2)"] == "c == d?<br/>True" ==> D1["d: (1, 2)"]
+                    end
+                    style A1 fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style B1 fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style C1 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style D1 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Why this matters</h4>
+                    <p>Value equality is exactly what you want for data. Two products with the same name, category, and price <em>are</em> the same product for most purposes. Records give you that behavior — plus a matching <code>GetHashCode</code> — automatically, so they work correctly as dictionary keys and in <code>HashSet</code> (Lesson 1.3) too.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Immutability and with -->
+            <section id="immutability" class="lesson-section">
+                <h2>Immutability and <code>with</code></h2>
+                <p>Positional record properties are <strong>immutable</strong> by default — once created, they can't be changed (they use <code>init</code> accessors, settable only during construction):</p>
+
+                <pre><code class="language-csharp">record Product(string Name, string Category, decimal Price);
+
+Product p = new Product("Keyboard", "Electronics", 45m);
+// p.Price = 50m;   // ❌ Error — records are immutable by default</code></pre>
+
+                <p>Immutability is a feature: data that can't change under you is easier to reason about. But what if you need "the same product but cheaper"? Use a <strong><code>with</code>-expression</strong> to create a modified <em>copy</em>, leaving the original untouched:</p>
+
+                <pre><code class="language-csharp">Product original = new Product("Keyboard", "Electronics", 45m);
+
+Product discounted = original with { Price = 40m };
+
+Console.WriteLine(original.Price);     // 45 — unchanged
+Console.WriteLine(discounted.Price);  // 40 — a new copy with one change</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Non-destructive mutation</h4>
+                    <p>The <code>with</code> expression copies all properties, then overrides only the ones you list. This "change by copying" style (called <em>non-destructive mutation</em>) is safer than editing shared objects — no one else's reference is affected.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Deconstruction -->
+            <section id="deconstruction" class="lesson-section">
+                <h2>Deconstruction</h2>
+                <p>Positional records can be <strong>deconstructed</strong> — unpacked into separate variables in one step, mirroring how they were constructed:</p>
+
+                <pre><code class="language-csharp">record Point(int X, int Y);
+
+Point p = new Point(3, 4);
+
+var (x, y) = p;          // deconstruct into x and y
+Console.WriteLine($"x = {x}, y = {y}");   // x = 3, y = 4</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Handy with tuples too</h4>
+                    <p>This same deconstruction syntax works with tuples and anywhere a type supports it. It's a clean way to pull multiple values out at once — and it pairs nicely with the pattern matching you'll learn in the next lesson.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Record vs class -->
+            <section id="record-vs-class" class="lesson-section">
+                <h2>Record vs. Class</h2>
+                <p>Records don't replace classes — they're a better fit for a specific job. Here's how to choose:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>record</th><th>class</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Best for</strong></td><td>Holding data (DTOs, values, results)</td><td>Objects with behavior and identity</td></tr>
+                            <tr><td><strong>Equality</strong></td><td>By value (contents)</td><td>By reference (identity)</td></tr>
+                            <tr><td><strong>Default mutability</strong></td><td>Immutable (positional)</td><td>Mutable</td></tr>
+                            <tr><td><strong>Free extras</strong></td><td><code>ToString</code>, equality, <code>with</code>, deconstruct</td><td>None (you write them)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <blockquote>
+                    <strong>💡 Rule of thumb:</strong> If a type is mostly a bundle of values and two instances with the same data should count as equal, use a <strong>record</strong>. If a type is about <em>behavior</em> and identity — a <code>BankAccount</code>, a <code>Game</code>, a service — use a <strong>class</strong>.
+                </blockquote>
+
+                <div class="card card-info">
+                    <h4>💡 Records can do class-like things too</h4>
+                    <p>Records support methods, inheritance from other records, and even a non-positional form with regular property bodies. But their sweet spot — and the reason they exist — is concise, value-based data types. Start there.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: Money with Records</h3>
+                    <p><strong>Objective:</strong> Use a record's value equality, <code>with</code>-expression, and deconstruction.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>Records</code>.</li>
+                        <li>Declare a positional record <code>Money(string Currency, decimal Amount)</code>.</li>
+                        <li>Create two separate <code>Money</code> values with the same currency and amount, and print whether they're equal (they should be <code>True</code>).</li>
+                        <li>Use a <code>with</code>-expression to make a copy with a different amount, and print both to show the original is unchanged.</li>
+                        <li>Deconstruct a <code>Money</code> value into <code>currency</code> and <code>amount</code> variables and print them.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">record Money(string Currency, decimal Amount);
+
+// TODO: create two equal Money values and compare with ==
+// TODO: use 'with' to make a copy with a new Amount
+// TODO: deconstruct a Money into (currency, amount)</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Compare with <code>m1 == m2</code>. Copy with <code>var raised = original with { Amount = 100m };</code>. Deconstruct with <code>var (currency, amount) = original;</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">record Money(string Currency, decimal Amount);
+
+var m1 = new Money("USD", 50m);
+var m2 = new Money("USD", 50m);
+Console.WriteLine(m1 == m2);          // True — value equality
+
+var raised = m1 with { Amount = 75m };
+Console.WriteLine(m1);                 // Money { Currency = USD, Amount = 50 }
+Console.WriteLine(raised);            // Money { Currency = USD, Amount = 75 }
+
+var (currency, amount) = m1;
+Console.WriteLine($"{amount} {currency}");   // 50 USD</code></pre>
+                        <p>Output:</p>
+                        <pre><code>True
+Money { Currency = USD, Amount = 50 }
+Money { Currency = USD, Amount = 75 }
+50 USD</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Two <em>separate</em> record instances with identical data are…</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Records use value equality, so identical data means equal.">
+                                A) Equal (records use value equality).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That's how classes behave, not records.">
+                                B) Not equal (they're different objects).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Comparing records is perfectly allowed.">
+                                C) A compile error.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does <code>original with { Price = 40m }</code> do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Records are immutable by default — the original isn't changed.">
+                                A) Changes <code>original</code>'s price to 40.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! It creates a new copy with Price overridden, leaving the original untouched.">
+                                B) Creates a new copy with <code>Price</code> set to 40, leaving <code>original</code> unchanged.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It returns a new record, not a bool.">
+                                C) Returns <code>true</code> if the price is 40.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> When is a <code>record</code> the better choice over a <code>class</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Records shine for immutable data types where value equality is what you want.">
+                                A) For a data-holding type where two instances with the same values should be equal.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Behavior-and-identity types are the classic case for a class.">
+                                B) For a service object with lots of behavior and a distinct identity.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Records aren't about speed; they're about data semantics.">
+                                C) Whenever you want the program to run faster.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>record</strong> is a concise, data-focused type; the positional form <code>record Product(string Name, decimal Price);</code> generates properties, a constructor, <code>ToString</code>, and equality.</li>
+                        <li>Records have <strong>value equality</strong> (equal if their contents match); classes have <strong>reference equality</strong> (equal only if the same object).</li>
+                        <li>Positional records are <strong>immutable</strong>; make modified copies with a <code>with</code>-expression (non-destructive mutation).</li>
+                        <li>Records can be <strong>deconstructed</strong> into their parts: <code>var (x, y) = point;</code>.</li>
+                        <li>Use a <strong>record</strong> for data where value equality fits; use a <strong>class</strong> for behavior-and-identity objects.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/builtin-types/record" target="_blank" rel="noopener">Records — C# reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/object-oriented/#record-types" target="_blank" rel="noopener">Record types — fundamentals</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/with-expression" target="_blank" rel="noopener">with expression — reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>Records pair beautifully with our next topic. In <strong>Lesson 3.2: Pattern Matching</strong>, you'll test and deconstruct values with expressive <code>switch</code> expressions and type patterns — turning tangled <code>if</code> chains into clear, concise code.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Records unlocked!</h3>
+                    <p>You can now declare clean, value-based data types in a single line. Next: pattern matching.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_06.html" class="prev-lesson">← Previous: Lesson 2.3 — LINQ</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_08.html" class="next-lesson">Next: Lesson 3.2 — Pattern Matching →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

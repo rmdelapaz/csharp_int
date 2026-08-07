@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Convert C# objects to and from JSON with System.Text.Json: serialize, deserialize, options, and saving to files.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 4.2: JSON Serialization - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 4: Data and I/O</a></li>
+            <li aria-current="page">Lesson 4.2: JSON Serialization</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 4.2: JSON Serialization</h1>
+                <p class="lead">Text files are fine for plain strings, but real apps store <em>structured</em> data — objects with properties, lists of records. JSON is the universal format for that, and C# converts your objects to and from it in a single line.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what serialization and JSON are</li>
+                        <li>Serialize objects and collections with <code>JsonSerializer.Serialize</code></li>
+                        <li>Deserialize JSON back into objects with <code>JsonSerializer.Deserialize</code></li>
+                        <li>Control output with <code>JsonSerializerOptions</code></li>
+                        <li>Save and load objects to a file by combining JSON with file I/O</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Save a list of objects to a JSON file and load them back.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is Serialization?</a></li>
+                        <li><a href="#serialize" class="toc-link">Serializing to JSON</a></li>
+                        <li><a href="#deserialize" class="toc-link">Deserializing from JSON</a></li>
+                        <li><a href="#options" class="toc-link">Options: Formatting &amp; Naming</a></li>
+                        <li><a href="#files" class="toc-link">Saving Objects to a File</a></li>
+                        <li><a href="#gotchas" class="toc-link">Common Gotchas</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is serialization -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is Serialization?</h2>
+                <p><strong>Serialization</strong> is converting an object in memory into a format that can be stored or transmitted — usually text. <strong>Deserialization</strong> is the reverse: rebuilding the object from that text. <strong>JSON</strong> (JavaScript Object Notation) is the most common format for this.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>JSON:</strong> a lightweight, human-readable text format for structured data, using key/value pairs and lists. It's the lingua franca of web APIs, config files, and saved app state.</p>
+                </div>
+
+                <p>A C# object and its JSON look like mirror images of each other:</p>
+                <div class="mermaid">
+                    graph LR
+                    A["C# object<br/>Product { Name, Price }"] -->|"Serialize"| B["JSON text<br/>{ 'name': 'Keyboard', 'price': 45 }"]
+                    B -->|"Deserialize"| A
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style B fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>.NET's built-in JSON tools live in <code>System.Text.Json</code>. (You may need <code>using System.Text.Json;</code> at the top.)</p>
+            </section>
+
+            <!-- Section 2: Serialize -->
+            <section id="serialize" class="lesson-section">
+                <h2>Serializing to JSON</h2>
+                <p><code>JsonSerializer.Serialize</code> turns any object into a JSON string. It automatically includes the object's public properties:</p>
+
+                <pre><code class="language-csharp">using System.Text.Json;
+
+record Product(string Name, string Category, decimal Price);
+
+Product keyboard = new Product("Keyboard", "Electronics", 45m);
+
+string json = JsonSerializer.Serialize(keyboard);
+Console.WriteLine(json);
+// {"Name":"Keyboard","Category":"Electronics","Price":45}</code></pre>
+
+                <p>Collections serialize just as easily — a <code>List</code> becomes a JSON array:</p>
+                <pre><code class="language-csharp">List&lt;Product&gt; products = new List&lt;Product&gt;
+{
+    new Product("Keyboard", "Electronics", 45m),
+    new Product("Desk", "Furniture", 150m)
+};
+
+string json = JsonSerializer.Serialize(products);
+Console.WriteLine(json);
+// [{"Name":"Keyboard",...},{"Name":"Desk",...}]</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Works with records and classes</h4>
+                    <p>The <code>record</code> types from Lesson 3.1 serialize perfectly, and so do regular classes. Serialization reads your object's public properties — no extra setup required for typical data types.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Deserialize -->
+            <section id="deserialize" class="lesson-section">
+                <h2>Deserializing from JSON</h2>
+                <p><code>JsonSerializer.Deserialize&lt;T&gt;</code> rebuilds an object from JSON text. You tell it the target type with a generic argument (Lesson 1.2), and it fills in the properties by matching names:</p>
+
+                <pre><code class="language-csharp">string json = "{\"Name\":\"Mouse\",\"Category\":\"Electronics\",\"Price\":25}";
+
+Product? product = JsonSerializer.Deserialize&lt;Product&gt;(json);
+
+Console.WriteLine(product?.Name);    // Mouse
+Console.WriteLine(product?.Price);   // 25</code></pre>
+
+                <p>Deserializing a JSON array back into a <code>List</code>:</p>
+                <pre><code class="language-csharp">string json = "[{\"Name\":\"Keyboard\",\"Category\":\"Electronics\",\"Price\":45}]";
+
+List&lt;Product&gt;? items = JsonSerializer.Deserialize&lt;List&lt;Product&gt;&gt;(json);
+Console.WriteLine(items?.Count);     // 1</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Deserialize can return null / throw</h4>
+                    <p><code>Deserialize&lt;T&gt;</code> returns a <em>nullable</em> result (note the <code>?</code> — Lesson 3.3), and malformed JSON throws a <code>JsonException</code>. For untrusted input, check for null and wrap the call in <code>try</code>/<code>catch (JsonException)</code> — the exception habits from Lesson 1.1 apply here too.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Options -->
+            <section id="options" class="lesson-section">
+                <h2>Options: Formatting &amp; Naming</h2>
+                <p>By default the JSON is compact and uses your C# property names (PascalCase). Pass a <code>JsonSerializerOptions</code> to change that — two options you'll use constantly:</p>
+
+                <pre><code class="language-csharp">var options = new JsonSerializerOptions
+{
+    WriteIndented = true,                                  // pretty-print
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase     // camelCase keys
+};
+
+string json = JsonSerializer.Serialize(keyboard, options);
+Console.WriteLine(json);</code></pre>
+
+                <div class="card card-output">
+                    <h4>Output:</h4>
+                    <pre><code>{
+  "name": "Keyboard",
+  "category": "Electronics",
+  "price": 45
+}</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Naming matters for interop</h4>
+                    <p><code>WriteIndented</code> makes JSON readable for humans and config files. <code>CamelCase</code> naming matches the convention most web APIs and JavaScript expect — important when your JSON talks to other systems (as it will in Lesson 5.1). Use the <em>same</em> options for serializing and deserializing so names line up.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Saving to a file -->
+            <section id="files" class="lesson-section">
+                <h2>Saving Objects to a File</h2>
+                <p>Now combine this lesson with the last one: serialize to a JSON string, then write it to a file with the <code>File</code> class. This is a complete "save and load" for structured data.</p>
+
+                <pre><code class="language-csharp">using System.Text.Json;
+
+var options = new JsonSerializerOptions { WriteIndented = true };
+string path = "products.json";
+
+// SAVE: object → JSON → file
+List&lt;Product&gt; products = new List&lt;Product&gt;
+{
+    new Product("Keyboard", "Electronics", 45m),
+    new Product("Desk", "Furniture", 150m)
+};
+string json = JsonSerializer.Serialize(products, options);
+File.WriteAllText(path, json);
+Console.WriteLine("Saved!");
+
+// LOAD: file → JSON → object
+if (File.Exists(path))
+{
+    string loaded = File.ReadAllText(path);
+    List&lt;Product&gt;? restored = JsonSerializer.Deserialize&lt;List&lt;Product&gt;&gt;(loaded);
+    Console.WriteLine($"Loaded {restored?.Count} products.");
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ A reusable save/load pattern</h4>
+                    <p>This "serialize → <code>WriteAllText</code>" and "<code>ReadAllText</code> → deserialize" round-trip is how a huge number of apps persist their state: settings, saved games, to-do lists, caches. You now have a general-purpose way to save any object graph to disk and bring it back.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Gotchas -->
+            <section id="gotchas" class="lesson-section">
+                <h2>Common Gotchas</h2>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Only public properties are included</h4>
+                    <p>By default, serialization uses <strong>public</strong> properties. Private fields and non-public members are ignored. If a value isn't showing up in your JSON, check that it's a public property.</p>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Deserialization needs a way to construct the object</h4>
+                    <p>To rebuild an object, the serializer needs either a parameterless constructor or a constructor whose parameters match the JSON property names. <strong>Records work out of the box</strong> because their positional parameters line up with their properties — another reason records are handy for data. A class with only a custom multi-argument constructor may need a parameterless one added.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Name matching is case-insensitive by default on read</h4>
+                    <p>When deserializing, <code>System.Text.Json</code> matches property names case-insensitively by default, so JSON <code>"name"</code> maps to a C# <code>Name</code> property. Still, keep your serialize/deserialize options consistent to avoid surprises.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A JSON-Backed Task List</h3>
+                    <p><strong>Objective:</strong> Round-trip a list of objects through JSON and a file.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>JsonTasks</code>.</li>
+                        <li>Define <code>record TaskItem(string Title, bool IsDone);</code>.</li>
+                        <li>Create a <code>List&lt;TaskItem&gt;</code> with a few tasks.</li>
+                        <li>Serialize it (with <code>WriteIndented = true</code>) and save to <code>tasks.json</code> using <code>File.WriteAllText</code>.</li>
+                        <li>Read the file back, deserialize into a new <code>List&lt;TaskItem&gt;</code>, and print each task's title and status.</li>
+                        <li><strong>Bonus:</strong> wrap the load in <code>try</code>/<code>catch (JsonException)</code>.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">using System.Text.Json;
+
+record TaskItem(string Title, bool IsDone);
+
+var tasks = new List&lt;TaskItem&gt;
+{
+    new TaskItem("Learn JSON", true),
+    new TaskItem("Build an app", false)
+};
+
+string path = "tasks.json";
+var options = new JsonSerializerOptions { WriteIndented = true };
+
+// TODO: serialize tasks and write to path
+// TODO: read path, deserialize, and print each task</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Save: <code>File.WriteAllText(path, JsonSerializer.Serialize(tasks, options));</code>. Load: <code>var loaded = JsonSerializer.Deserialize&lt;List&lt;TaskItem&gt;&gt;(File.ReadAllText(path));</code>, then <code>foreach</code> over <code>loaded</code> (guard for null).</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">using System.Text.Json;
+
+record TaskItem(string Title, bool IsDone);
+
+var tasks = new List&lt;TaskItem&gt;
+{
+    new TaskItem("Learn JSON", true),
+    new TaskItem("Build an app", false)
+};
+
+string path = "tasks.json";
+var options = new JsonSerializerOptions { WriteIndented = true };
+
+// Save
+File.WriteAllText(path, JsonSerializer.Serialize(tasks, options));
+Console.WriteLine("Saved tasks.json");
+
+// Load
+try
+{
+    string text = File.ReadAllText(path);
+    var loaded = JsonSerializer.Deserialize&lt;List&lt;TaskItem&gt;&gt;(text);
+
+    foreach (var t in loaded ?? new List&lt;TaskItem&gt;())
+    {
+        string mark = t.IsDone ? "[x]" : "[ ]";
+        Console.WriteLine($"{mark} {t.Title}");
+    }
+}
+catch (JsonException ex)
+{
+    Console.WriteLine($"Invalid JSON: {ex.Message}");
+}</code></pre>
+                        <p>Output:</p>
+                        <pre><code>Saved tasks.json
+[x] Learn JSON
+[ ] Build an app</code></pre>
+                        <p>And <code>tasks.json</code> on disk contains readable, indented JSON.</p>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does serialization do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Serialization converts an in-memory object into a storable/transmittable format like JSON text.">
+                                A) Converts an object into text (e.g. JSON) that can be stored or sent.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That's deserialization — the reverse direction.">
+                                B) Rebuilds an object from JSON text.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's about format conversion, not deletion.">
+                                C) Deletes an object from memory.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Which option makes serialized JSON human-readable with indentation?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That option changes key casing, not indentation.">
+                                A) <code>PropertyNamingPolicy = CamelCase</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! WriteIndented = true pretty-prints the JSON.">
+                                B) <code>WriteIndented = true</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="There's no such option; indentation is WriteIndented.">
+                                C) <code>PrettyPrint = true</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> By default, which members does <code>System.Text.Json</code> serialize?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Private fields are ignored by default.">
+                                A) All fields, public and private.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! By default only public properties are serialized.">
+                                B) Public properties.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It includes public data, not nothing.">
+                                C) Nothing unless you configure it.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Serialization</strong> turns an object into text (JSON); <strong>deserialization</strong> rebuilds it. Tools live in <code>System.Text.Json</code>.</li>
+                        <li><code>JsonSerializer.Serialize(obj)</code> produces JSON; <code>JsonSerializer.Deserialize&lt;T&gt;(json)</code> reconstructs an object (result is nullable; malformed JSON throws <code>JsonException</code>).</li>
+                        <li>Records, classes, and collections all serialize; only <strong>public properties</strong> are included by default.</li>
+                        <li>Control output with <code>JsonSerializerOptions</code> — <code>WriteIndented</code> and <code>PropertyNamingPolicy = CamelCase</code> are the common ones.</li>
+                        <li>Combine with file I/O (Lesson 4.1): serialize → <code>WriteAllText</code>, and <code>ReadAllText</code> → deserialize for a full save/load.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/" target="_blank" rel="noopener">System.Text.Json overview — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/how-to" target="_blank" rel="noopener">How to serialize and deserialize JSON</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.text.json.jsonserializer" target="_blank" rel="noopener">JsonSerializer — API reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You can save and load structured data locally. But modern apps also fetch data over the internet — often as JSON. In <strong>Lesson 4.3: Asynchronous Programming</strong>, you'll learn <code>async</code>/<code>await</code>, the key to doing slow work (like network and file access) without freezing your app.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Structured data, saved!</h3>
+                    <p>Your objects can now live on disk and travel between systems. Next: doing slow work without freezing.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_10.html" class="prev-lesson">← Previous: Lesson 4.1 — Working with Files and Streams</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_12.html" class="next-lesson">Next: Lesson 4.3 — Asynchronous Programming →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Treat behavior as data in C# with delegates and lambdas: Func, Action, Predicate, and passing methods as arguments.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 2.1: Delegates and Lambdas - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 2: Functional-Style C#</a></li>
+            <li aria-current="page">Lesson 2.1: Delegates and Lambdas</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 2.1: Delegates and Lambdas</h1>
+                <p class="lead">Until now, data was data and methods were methods. In this lesson those worlds merge: you'll learn to treat a <em>method itself</em> as a value you can store, pass to other methods, and call later. This idea powers events, LINQ, and modern C#.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what a delegate is and why "methods as data" is useful</li>
+                        <li>Declare a delegate type, assign a method to it, and invoke it</li>
+                        <li>Use the built-in <code>Func</code>, <code>Action</code>, and <code>Predicate</code> delegates</li>
+                        <li>Write concise lambda expressions with <code>=&gt;</code></li>
+                        <li>Pass behavior into a method as an argument</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Build a mini toolkit that takes behavior as a parameter.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">Methods as Data</a></li>
+                        <li><a href="#delegates" class="toc-link">Declaring a Delegate</a></li>
+                        <li><a href="#builtin" class="toc-link">Func, Action, and Predicate</a></li>
+                        <li><a href="#lambdas" class="toc-link">Lambda Expressions</a></li>
+                        <li><a href="#passing" class="toc-link">Passing Behavior to Methods</a></li>
+                        <li><a href="#capture" class="toc-link">Capturing Variables</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: Methods as data -->
+            <section id="introduction" class="lesson-section">
+                <h2>Methods as Data</h2>
+                <p>You already pass <em>values</em> into methods — numbers, strings, objects. What if you could pass a <em>method</em> itself, so the receiving code can call it? That's exactly what delegates make possible.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Delegate:</strong> a type that holds a reference to a method. A delegate variable can store any method whose signature (parameters and return type) matches, and you can invoke that method through the variable.</p>
+                </div>
+
+                <p>Think of a delegate as a <strong>"slot" for a method</strong>. The slot specifies the shape of method it accepts (say, "takes two ints, returns an int"), and you can plug in any matching method — then swap it out later.</p>
+
+                <div class="mermaid">
+                    graph LR
+                    A["Delegate variable<br/>(a slot for a method)"] --> B["Add()"]
+                    A -.->|"reassign"| C["Multiply()"]
+                    A --> D["Invoke → runs whichever<br/>method is plugged in"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style D fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>This unlocks a powerful pattern: writing general code that does the structure of a task, while the caller supplies the specific behavior.</p>
+            </section>
+
+            <!-- Section 2: Declaring a delegate -->
+            <section id="delegates" class="lesson-section">
+                <h2>Declaring a Delegate</h2>
+                <p>You can declare a delegate <em>type</em> with the <code>delegate</code> keyword. It looks like a method signature with no body:</p>
+
+                <pre><code class="language-csharp">// A delegate type: "any method taking two ints and returning an int"
+delegate int MathOp(int a, int b);</code></pre>
+
+                <p>Now any matching method can be stored in a variable of that type and called through it:</p>
+
+                <pre><code class="language-csharp">int Add(int a, int b) =&gt; a + b;
+int Multiply(int a, int b) =&gt; a * b;
+
+MathOp op = Add;              // plug in the Add method
+Console.WriteLine(op(3, 4)); // 7 — calling Add through the delegate
+
+op = Multiply;               // swap in a different method
+Console.WriteLine(op(3, 4)); // 12 — now it calls Multiply</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Note the signatures match</h4>
+                    <p>Both <code>Add</code> and <code>Multiply</code> take two ints and return an int — exactly what <code>MathOp</code> requires. A method with a different signature won't fit the slot, and the compiler will say so. (Also note: you assign <code>Add</code> without parentheses — <code>op = Add</code> stores the method; <code>op(3, 4)</code> calls it.)</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Func, Action, Predicate -->
+            <section id="builtin" class="lesson-section">
+                <h2>Func, Action, and Predicate</h2>
+                <p>In practice you rarely declare your own delegate types, because .NET provides ready-made generic ones that cover almost every case. These are the ones you'll use constantly:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Delegate</th><th>Represents a method that…</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>Action</code></td><td>takes no arguments and returns nothing (<code>void</code>)</td></tr>
+                            <tr><td><code>Action&lt;T&gt;</code></td><td>takes a <code>T</code> and returns nothing</td></tr>
+                            <tr><td><code>Func&lt;TResult&gt;</code></td><td>takes nothing and returns a <code>TResult</code></td></tr>
+                            <tr><td><code>Func&lt;T, TResult&gt;</code></td><td>takes a <code>T</code> and returns a <code>TResult</code></td></tr>
+                            <tr><td><code>Predicate&lt;T&gt;</code></td><td>takes a <code>T</code> and returns a <code>bool</code> (a test)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The rule for <code>Func</code>: the <strong>last</strong> type parameter is the return type; the earlier ones are parameters. So <code>Func&lt;int, int, int&gt;</code> means "takes two ints, returns an int" — our <code>MathOp</code> without the custom declaration:</p>
+
+                <pre><code class="language-csharp">Func&lt;int, int, int&gt; add = Add;        // two int params, int result
+Console.WriteLine(add(3, 4));         // 7
+
+Action&lt;string&gt; greet = name =&gt; Console.WriteLine($"Hi, {name}!");
+greet("Ada");                         // Hi, Ada!
+
+Predicate&lt;int&gt; isEven = n =&gt; n % 2 == 0;
+Console.WriteLine(isEven(10));        // True</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Prefer the built-ins</h4>
+                    <p>Reach for <code>Func</code>, <code>Action</code>, and <code>Predicate</code> instead of writing your own <code>delegate</code> types. They're instantly recognizable to other developers and are what .NET's own APIs (including LINQ) expect.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Lambdas -->
+            <section id="lambdas" class="lesson-section">
+                <h2>Lambda Expressions</h2>
+                <p>Writing a whole named method just to plug it into a delegate is often overkill. A <strong>lambda expression</strong> is a compact, inline, anonymous method. You've already seen the <code>=&gt;</code> ("goes to") arrow in expression-bodied methods; lambdas use the same arrow:</p>
+
+                <pre><code class="language-csharp">// Parameters =&gt; result
+Func&lt;int, int, int&gt; add = (a, b) =&gt; a + b;
+Func&lt;int, int&gt; square = x =&gt; x * x;
+Action greet = () =&gt; Console.WriteLine("Hello!");
+
+Console.WriteLine(add(3, 4));   // 7
+Console.WriteLine(square(5));   // 25
+greet();                        // Hello!</code></pre>
+
+                <p>Anatomy of a lambda:</p>
+                <ul>
+                    <li><strong>Parameters</strong> in parentheses on the left — <code>(a, b)</code>. With exactly one parameter you can drop the parentheses: <code>x =&gt; x * x</code>.</li>
+                    <li>The <strong><code>=&gt;</code> arrow</strong>.</li>
+                    <li>The <strong>body</strong> on the right — a single expression whose value is returned automatically.</li>
+                </ul>
+
+                <p>For multiple statements, use braces and an explicit <code>return</code>:</p>
+                <pre><code class="language-csharp">Func&lt;int, string&gt; describe = n =&gt;
+{
+    if (n &gt; 0) return "positive";
+    if (n &lt; 0) return "negative";
+    return "zero";
+};
+
+Console.WriteLine(describe(-5));   // negative</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Types are inferred</h4>
+                    <p>You didn't declare types for <code>a</code>, <code>b</code>, or <code>x</code> — C# infers them from the delegate the lambda is assigned to. That brevity is the whole point: lambdas let you express behavior with minimal ceremony.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Passing behavior -->
+            <section id="passing" class="lesson-section">
+                <h2>Passing Behavior to Methods</h2>
+                <p>Here's where it all pays off. A method can accept a delegate as a parameter, letting the caller inject custom behavior. Consider a method that processes a list but lets <em>you</em> decide the operation:</p>
+
+                <pre><code class="language-csharp">// Applies the given operation to every number and prints the result
+void ForEachNumber(List&lt;int&gt; numbers, Action&lt;int&gt; action)
+{
+    foreach (int n in numbers)
+    {
+        action(n);
+    }
+}
+
+List&lt;int&gt; nums = new List&lt;int&gt; { 1, 2, 3 };
+
+ForEachNumber(nums, n =&gt; Console.WriteLine(n * 10));   // 10, 20, 30
+ForEachNumber(nums, n =&gt; Console.WriteLine($"[{n}]")); // [1], [2], [3]</code></pre>
+
+                <p>Same loop, totally different behavior — chosen by the caller at the call site. Now a filtering example using a <code>Func</code> that returns a <code>bool</code>:</p>
+
+                <pre><code class="language-csharp">List&lt;int&gt; Filter(List&lt;int&gt; numbers, Func&lt;int, bool&gt; test)
+{
+    List&lt;int&gt; results = new List&lt;int&gt;();
+    foreach (int n in numbers)
+    {
+        if (test(n))          // the caller decides what "keep" means
+        {
+            results.Add(n);
+        }
+    }
+    return results;
+}
+
+List&lt;int&gt; nums = new List&lt;int&gt; { 1, 2, 3, 4, 5, 6 };
+
+List&lt;int&gt; evens = Filter(nums, n =&gt; n % 2 == 0);     // 2, 4, 6
+List&lt;int&gt; big = Filter(nums, n =&gt; n &gt; 3);            // 4, 5, 6</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ This is how LINQ works</h4>
+                    <p>That <code>Filter</code> method is essentially LINQ's <code>Where</code>. In Lesson 2.3 you'll use the real, built-in versions — <code>Where</code>, <code>Select</code>, and friends — which all take lambdas exactly like this. Delegates and lambdas are the foundation LINQ is built on.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Capturing variables -->
+            <section id="capture" class="lesson-section">
+                <h2>Capturing Variables</h2>
+                <p>A lambda can use variables from the surrounding code, not just its own parameters. This is called <strong>capturing</strong> (or a "closure"):</p>
+
+                <pre><code class="language-csharp">int threshold = 3;
+
+Func&lt;int, bool&gt; aboveThreshold = n =&gt; n &gt; threshold;   // captures 'threshold'
+
+Console.WriteLine(aboveThreshold(5));   // True
+Console.WriteLine(aboveThreshold(2));   // False</code></pre>
+
+                <p>The lambda "remembers" <code>threshold</code> even though it wasn't passed in as a parameter. This makes lambdas great for building behavior tailored to the current context.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Captured variables are live references</h4>
+                    <p>A lambda captures the <em>variable</em>, not a snapshot of its value. If the variable changes after the lambda is created, the lambda sees the new value:</p>
+                    <pre><code class="language-csharp">int factor = 2;
+Func&lt;int, int&gt; scale = n =&gt; n * factor;
+Console.WriteLine(scale(10));   // 20
+
+factor = 5;                     // change it afterward
+Console.WriteLine(scale(10));   // 50 — uses the updated factor</code></pre>
+                    <p>This is usually what you want, but it can surprise you inside loops — a well-known gotcha worth remembering.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Configurable Transformer</h3>
+                    <p><strong>Objective:</strong> Write methods that take behavior as parameters, and call them with lambdas.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>Behaviors</code>.</li>
+                        <li>Write a method <code>List&lt;int&gt; Transform(List&lt;int&gt; numbers, Func&lt;int, int&gt; op)</code> that returns a new list with <code>op</code> applied to each element.</li>
+                        <li>Call it three ways with lambdas: double each number, square each number, and add 100 to each.</li>
+                        <li>Write a method <code>int CountWhere(List&lt;int&gt; numbers, Func&lt;int, bool&gt; test)</code> that returns how many elements satisfy the test. Use it to count evens and count numbers greater than 50.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">List&lt;int&gt; nums = new List&lt;int&gt; { 1, 2, 3, 4, 5 };
+
+// TODO: use Transform to double each, then print
+
+List&lt;int&gt; Transform(List&lt;int&gt; numbers, Func&lt;int, int&gt; op)
+{
+    // TODO: apply op to each element into a new list
+    return new List&lt;int&gt;();
+}
+
+// TODO: int CountWhere(List&lt;int&gt; numbers, Func&lt;int, bool&gt; test)</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>In <code>Transform</code>, loop and <code>results.Add(op(n));</code>. To double, call <code>Transform(nums, n =&gt; n * 2)</code>. In <code>CountWhere</code>, keep a counter and <code>if (test(n)) count++;</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">List&lt;int&gt; nums = new List&lt;int&gt; { 1, 2, 3, 4, 5 };
+
+List&lt;int&gt; doubled = Transform(nums, n =&gt; n * 2);
+Console.WriteLine(string.Join(", ", doubled));    // 2, 4, 6, 8, 10
+
+List&lt;int&gt; squared = Transform(nums, n =&gt; n * n);
+Console.WriteLine(string.Join(", ", squared));    // 1, 4, 9, 16, 25
+
+Console.WriteLine(Transform(nums, n =&gt; n + 100)[0]);  // 101
+
+Console.WriteLine(CountWhere(nums, n =&gt; n % 2 == 0)); // 2 (evens: 2,4)
+Console.WriteLine(CountWhere(nums, n =&gt; n &gt; 50));      // 0
+
+List&lt;int&gt; Transform(List&lt;int&gt; numbers, Func&lt;int, int&gt; op)
+{
+    List&lt;int&gt; results = new List&lt;int&gt;();
+    foreach (int n in numbers)
+    {
+        results.Add(op(n));
+    }
+    return results;
+}
+
+int CountWhere(List&lt;int&gt; numbers, Func&lt;int, bool&gt; test)
+{
+    int count = 0;
+    foreach (int n in numbers)
+    {
+        if (test(n))
+        {
+            count++;
+        }
+    }
+    return count;
+}</code></pre>
+                        <p>(<code>string.Join(", ", list)</code> is a handy way to print a collection on one line.)</p>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does a delegate hold?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A delegate isn't a number or plain value.">
+                                A) A numeric value.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! A delegate holds a reference to a method with a matching signature.">
+                                B) A reference to a method.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That's a List or array — a delegate references a method.">
+                                C) A collection of items.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does <code>Func&lt;int, bool&gt;</code> describe?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! The last type parameter is the return type, so this takes an int and returns a bool.">
+                                A) A method that takes an <code>int</code> and returns a <code>bool</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="For Func, the last type is the return type, not the first.">
+                                B) A method that takes a <code>bool</code> and returns an <code>int</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Func always returns something; a void method would be an Action.">
+                                C) A method that takes two ints and returns nothing.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> In the lambda <code>x =&gt; x * x</code>, what is <code>x</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It's not a fixed value — it's an input.">
+                                A) A constant equal to 2.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! x is the lambda's parameter; its type is inferred from the delegate.">
+                                B) The lambda's parameter (its input).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The name to the left of => is a parameter, not the return value.">
+                                C) The value the lambda returns.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>delegate</strong> is a type that references a method — a "slot" that accepts any method with a matching signature.</li>
+                        <li>Prefer the built-in generic delegates: <code>Action</code> (returns void), <code>Func&lt;…, TResult&gt;</code> (returns a value, last type param is the result), and <code>Predicate&lt;T&gt;</code> (returns bool).</li>
+                        <li><strong>Lambdas</strong> (<code>parameters =&gt; body</code>) are concise inline methods; single-expression bodies return automatically, and types are inferred.</li>
+                        <li>Passing a delegate/lambda into a method lets the caller inject behavior — the pattern behind LINQ.</li>
+                        <li>Lambdas <strong>capture</strong> surrounding variables by reference (a closure), so later changes are visible.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/delegates/" target="_blank" rel="noopener">Delegates — C# Programming Guide</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/lambda-expressions" target="_blank" rel="noopener">Lambda expressions — reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.func-2" target="_blank" rel="noopener">Func&lt;T,TResult&gt; — API reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>Delegates hold methods — and that's the mechanism behind <strong>events</strong>, C#'s way of letting objects broadcast notifications. In <strong>Lesson 2.2: Events</strong>, you'll build objects that others can subscribe to and react to.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Behavior is now data!</h3>
+                    <p>You can pass logic around like any other value. Next, we use delegates to power events.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_03.html" class="prev-lesson">← Previous: Lesson 1.3 — Collections in Depth</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_05.html" class="next-lesson">Next: Lesson 2.2 — Events →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

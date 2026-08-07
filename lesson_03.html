@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Go beyond List in C#: dictionaries, sets, queues, and stacks — and how to choose the right collection for the job.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 1.3: Collections in Depth - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 1: Writing Robust Code</a></li>
+            <li aria-current="page">Lesson 1.3: Collections in Depth</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 1.3: Collections in Depth</h1>
+                <p class="lead">You know arrays and <code>List&lt;T&gt;</code>. But .NET offers specialized collections that are dramatically better for particular jobs — fast lookups, unique items, and ordered processing. Choosing the right one makes your code clearer and faster.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Use <code>Dictionary&lt;TKey, TValue&gt;</code> for fast key-based lookups</li>
+                        <li>Use <code>HashSet&lt;T&gt;</code> to store unique items and test membership quickly</li>
+                        <li>Use <code>Queue&lt;T&gt;</code> (FIFO) and <code>Stack&lt;T&gt;</code> (LIFO) for ordered processing</li>
+                        <li>Explain why the right collection can be far faster than a <code>List</code></li>
+                        <li>Choose the appropriate collection for a given problem</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Solve small problems by picking the best-fit collection.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">Beyond the List</a></li>
+                        <li><a href="#dictionary" class="toc-link">Dictionary: Key/Value Lookups</a></li>
+                        <li><a href="#hashset" class="toc-link">HashSet: Unique Items</a></li>
+                        <li><a href="#queue-stack" class="toc-link">Queue and Stack</a></li>
+                        <li><a href="#performance" class="toc-link">Why the Right Choice Is Faster</a></li>
+                        <li><a href="#choosing" class="toc-link">Choosing a Collection</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: Beyond the list -->
+            <section id="introduction" class="lesson-section">
+                <h2>Beyond the List</h2>
+                <p>A <code>List&lt;T&gt;</code> is a great general-purpose collection, but it's not always the best tool. Suppose you want to look up a person's phone number by their name. With a list you'd have to loop through every entry checking names — slow, and awkward to write.</p>
+                <p>The .NET class library (all generic, thanks to Lesson 1.2) includes collections designed for exactly these situations. Each is optimized for a specific access pattern:</p>
+
+                <div class="mermaid">
+                    graph TD
+                    A["Need a collection?"] --> B["Look up by a key?<br/>→ Dictionary"]
+                    A --> C["Only unique items?<br/>→ HashSet"]
+                    A --> D["First-in, first-out?<br/>→ Queue"]
+                    A --> E["Last-in, first-out?<br/>→ Stack"]
+                    A --> F["Ordered, indexed list?<br/>→ List"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style B fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style C fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style D fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style E fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style F fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>All of these live in <code>System.Collections.Generic</code>, which modern projects include automatically.</p>
+            </section>
+
+            <!-- Section 2: Dictionary -->
+            <section id="dictionary" class="lesson-section">
+                <h2>Dictionary: Key/Value Lookups</h2>
+                <p>A <code>Dictionary&lt;TKey, TValue&gt;</code> stores <strong>pairs</strong>: each unique <em>key</em> maps to a <em>value</em>. Look up a value by its key directly — no looping. It's like a real dictionary: look up a word (key) to get its definition (value).</p>
+
+                <pre><code class="language-csharp">Dictionary&lt;string, int&gt; ages = new Dictionary&lt;string, int&gt;();
+
+ages["Ada"] = 30;          // add or update by key
+ages["Grace"] = 45;
+ages.Add("Alan", 41);      // Add also works (throws if key exists)
+
+Console.WriteLine(ages["Grace"]);   // 45 — instant lookup, no loop
+Console.WriteLine(ages.Count);      // 3</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Missing keys throw</h4>
+                    <p>Reading a key that doesn't exist (<code>ages["Bob"]</code>) throws a <code>KeyNotFoundException</code>. Check first, or use <code>TryGetValue</code> — the safe pattern that mirrors <code>TryParse</code>:</p>
+                    <pre><code class="language-csharp">if (ages.TryGetValue("Bob", out int bobAge))
+{
+    Console.WriteLine($"Bob is {bobAge}.");
+}
+else
+{
+    Console.WriteLine("Bob isn't in the dictionary.");
+}
+
+// Or just test membership:
+if (ages.ContainsKey("Ada")) { /* ... */ }</code></pre>
+                </div>
+
+                <p>Loop over a dictionary with <code>foreach</code>; each item is a <code>KeyValuePair</code> with <code>.Key</code> and <code>.Value</code>:</p>
+                <pre><code class="language-csharp">foreach (KeyValuePair&lt;string, int&gt; entry in ages)
+{
+    Console.WriteLine($"{entry.Key} is {entry.Value}");
+}
+
+// You can also loop just the keys or just the values:
+foreach (string name in ages.Keys) { Console.WriteLine(name); }</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Keys are unique</h4>
+                    <p>Each key appears at most once. Assigning to an existing key <em>updates</em> its value rather than adding a duplicate. This makes dictionaries perfect for lookups, counts, and caches.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: HashSet -->
+            <section id="hashset" class="lesson-section">
+                <h2>HashSet: Unique Items</h2>
+                <p>A <code>HashSet&lt;T&gt;</code> stores a collection of <strong>unique</strong> values — duplicates are silently ignored — and answers "is this item present?" extremely fast.</p>
+
+                <pre><code class="language-csharp">HashSet&lt;string&gt; visitors = new HashSet&lt;string&gt;();
+
+visitors.Add("Ada");
+visitors.Add("Grace");
+Console.WriteLine(visitors.Add("Ada"));   // False — already present, not added
+
+Console.WriteLine(visitors.Count);         // 2 (no duplicate)
+Console.WriteLine(visitors.Contains("Grace"));  // True — fast membership test</code></pre>
+
+                <p>A common use is de-duplicating: drop a list into a set and the duplicates disappear.</p>
+                <pre><code class="language-csharp">List&lt;int&gt; numbers = new List&lt;int&gt; { 1, 2, 2, 3, 3, 3 };
+HashSet&lt;int&gt; unique = new HashSet&lt;int&gt;(numbers);
+Console.WriteLine(unique.Count);   // 3</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Sets support set math</h4>
+                    <p><code>HashSet</code> offers real set operations: <code>UnionWith</code> (combine), <code>IntersectWith</code> (items in both), and <code>ExceptWith</code> (remove items found in another). Handy for comparing groups.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Queue and Stack -->
+            <section id="queue-stack" class="lesson-section">
+                <h2>Queue and Stack</h2>
+                <p>These two hold items in a specific processing order.</p>
+
+                <h3>Queue&lt;T&gt; — First In, First Out (FIFO)</h3>
+                <p>Like a line at a shop: the first person to join is the first served. Add with <code>Enqueue</code>, remove the oldest with <code>Dequeue</code>.</p>
+                <pre><code class="language-csharp">Queue&lt;string&gt; line = new Queue&lt;string&gt;();
+line.Enqueue("Ada");
+line.Enqueue("Grace");
+line.Enqueue("Alan");
+
+Console.WriteLine(line.Dequeue());   // Ada  (first in, first out)
+Console.WriteLine(line.Peek());      // Grace (next up, without removing)
+Console.WriteLine(line.Count);       // 2</code></pre>
+
+                <h3>Stack&lt;T&gt; — Last In, First Out (LIFO)</h3>
+                <p>Like a stack of plates: the last one placed is the first taken. Add with <code>Push</code>, remove the newest with <code>Pop</code>.</p>
+                <pre><code class="language-csharp">Stack&lt;string&gt; history = new Stack&lt;string&gt;();
+history.Push("page1");
+history.Push("page2");
+history.Push("page3");
+
+Console.WriteLine(history.Pop());    // page3 (last in, first out)
+Console.WriteLine(history.Peek());   // page2 (top, without removing)</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Where you'll see them</h4>
+                    <ul>
+                        <li><strong>Queue:</strong> processing jobs in arrival order, print queues, breadth-first search.</li>
+                        <li><strong>Stack:</strong> undo/redo, browser back button, evaluating expressions.</li>
+                    </ul>
+                    <p>Both throw <code>InvalidOperationException</code> if you <code>Dequeue</code>/<code>Pop</code> when empty — check <code>Count</code> first (or catch it, per Lesson 1.1).</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Performance -->
+            <section id="performance" class="lesson-section">
+                <h2>Why the Right Choice Is Faster</h2>
+                <p>This isn't just about tidy code — it's about speed. Finding an item in a <code>List</code> means potentially checking <em>every</em> element. A <code>Dictionary</code> or <code>HashSet</code> jumps almost straight to it, using a technique called <em>hashing</em>.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Operation</th><th><code>List&lt;T&gt;</code></th><th><code>Dictionary</code> / <code>HashSet</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Find / look up an item</td><td>Slow — checks items one by one</td><td>Fast — near-instant, regardless of size</td></tr>
+                            <tr><td>Access by numeric index</td><td>Fast</td><td>Not supported (no index)</td></tr>
+                            <tr><td>Keep insertion order</td><td>Yes</td><td>Not guaranteed</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <blockquote>
+                    <strong>💡 The practical rule:</strong> If your code loops through a <code>List</code> just to <em>find</em> something by a key or to check membership, a <code>Dictionary</code> or <code>HashSet</code> is almost certainly the better choice — often dramatically faster as the data grows.
+                </blockquote>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Trade-off: no order or index</h4>
+                    <p>The speed of dictionaries and sets comes from <em>not</em> maintaining a positional order. Don't rely on the order of items when iterating them, and remember you can't do <code>set[0]</code>. If you need ordered, indexable data, stick with a <code>List</code>.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Choosing -->
+            <section id="choosing" class="lesson-section">
+                <h2>Choosing a Collection</h2>
+                <p>A quick decision guide you can keep handy:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>If you need to…</th><th>Use</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Keep an ordered list you access by position</td><td><code>List&lt;T&gt;</code></td></tr>
+                            <tr><td>Look things up by a key</td><td><code>Dictionary&lt;TKey, TValue&gt;</code></td></tr>
+                            <tr><td>Store unique items / test membership fast</td><td><code>HashSet&lt;T&gt;</code></td></tr>
+                            <tr><td>Process items in arrival order (FIFO)</td><td><code>Queue&lt;T&gt;</code></td></tr>
+                            <tr><td>Process most-recent items first (LIFO)</td><td><code>Stack&lt;T&gt;</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Start simple, switch when needed</h4>
+                    <p>It's fine to reach for a <code>List</code> first. But the moment you notice you're looping to find-by-key, deduplicating, or processing in a strict order, switch to the collection built for it. Your code gets shorter <em>and</em> faster.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: Word Frequency Counter</h3>
+                    <p><strong>Objective:</strong> Pick the right collection to count how often each word appears — a perfect job for a <code>Dictionary</code>.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>WordCount</code>.</li>
+                        <li>Start with a sentence and split it into words: <code>string[] words = sentence.Split(' ');</code></li>
+                        <li>Use a <code>Dictionary&lt;string, int&gt;</code> to count each word: if the word is already a key, increment its count; otherwise add it with count 1.</li>
+                        <li>Print each word and its count.</li>
+                        <li><strong>Bonus:</strong> Use a <code>HashSet&lt;string&gt;</code> to also report how many <em>distinct</em> words there were.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">string sentence = "the cat sat on the mat the cat purred";
+string[] words = sentence.Split(' ');
+
+Dictionary&lt;string, int&gt; counts = new Dictionary&lt;string, int&gt;();
+
+// TODO: loop over words, count each into the dictionary
+
+// TODO: print each word and its count</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Inside the loop, use <code>TryGetValue</code> or <code>ContainsKey</code>: if present, <code>counts[word]++;</code>; otherwise <code>counts[word] = 1;</code>. A shortcut works too: <code>counts[word] = counts.GetValueOrDefault(word) + 1;</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">string sentence = "the cat sat on the mat the cat purred";
+string[] words = sentence.Split(' ');
+
+Dictionary&lt;string, int&gt; counts = new Dictionary&lt;string, int&gt;();
+
+foreach (string word in words)
+{
+    if (counts.ContainsKey(word))
+    {
+        counts[word]++;
+    }
+    else
+    {
+        counts[word] = 1;
+    }
+}
+
+foreach (KeyValuePair&lt;string, int&gt; entry in counts)
+{
+    Console.WriteLine($"{entry.Key}: {entry.Value}");
+}
+
+// Bonus: distinct word count
+HashSet&lt;string&gt; distinct = new HashSet&lt;string&gt;(words);
+Console.WriteLine($"Distinct words: {distinct.Count}");</code></pre>
+                        <p>Output:</p>
+                        <pre><code>the: 3
+cat: 2
+sat: 1
+on: 1
+mat: 1
+purred: 1
+Distinct words: 6</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Which collection is best for looking up a value by a unique key?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A List would require looping to find the match.">
+                                A) <code>List&lt;T&gt;</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Dictionary maps keys to values for fast, direct lookups.">
+                                B) <code>Dictionary&lt;TKey, TValue&gt;</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A Stack is about LIFO order, not key lookups.">
+                                C) <code>Stack&lt;T&gt;</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What happens if you <code>Add</code> a value that's already in a <code>HashSet</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Sets don't keep duplicates.">
+                                A) It's added again as a duplicate.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! The duplicate is ignored and Add returns false; the set keeps only unique items.">
+                                B) It's ignored (and <code>Add</code> returns <code>false</code>).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Adding a duplicate isn't an error — it's simply skipped.">
+                                C) It throws an exception.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A <code>Queue&lt;T&gt;</code> processes items in what order?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! A queue is FIFO — first in, first out, like a line at a shop.">
+                                A) First in, first out (FIFO).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That's a Stack (LIFO), not a Queue.">
+                                B) Last in, first out (LIFO).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Queues have a defined order, not a random one.">
+                                C) In random order.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><code>Dictionary&lt;TKey, TValue&gt;</code> maps unique keys to values for fast lookups; use <code>TryGetValue</code>/<code>ContainsKey</code> to avoid <code>KeyNotFoundException</code>.</li>
+                        <li><code>HashSet&lt;T&gt;</code> stores unique items and tests membership fast; great for de-duplication and set math.</li>
+                        <li><code>Queue&lt;T&gt;</code> is FIFO (<code>Enqueue</code>/<code>Dequeue</code>); <code>Stack&lt;T&gt;</code> is LIFO (<code>Push</code>/<code>Pop</code>). Both offer <code>Peek</code>.</li>
+                        <li>Dictionaries and sets are far faster for lookups than looping a <code>List</code> — but don't guarantee order or support indexing.</li>
+                        <li>Match the collection to the access pattern: index → List, key → Dictionary, uniqueness → HashSet, order → Queue/Stack.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.collections.generic.dictionary-2" target="_blank" rel="noopener">Dictionary&lt;TKey,TValue&gt; — API reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.collections.generic.hashset-1" target="_blank" rel="noopener">HashSet&lt;T&gt; — API reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/collections/" target="_blank" rel="noopener">Collections and Data Structures — overview</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>That completes <strong>Module 1</strong> — you can write robust, reusable, well-structured code. In <strong>Module 2</strong>, C# gets expressive. First up, <strong>Lesson 2.1: Delegates and Lambdas</strong>, where you'll learn to treat <em>behavior</em> itself as data you can pass around.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Module 1 complete!</h3>
+                    <p>Exceptions, generics, and the right collections — that's a robust foundation. Next, we make C# expressive.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_02.html" class="prev-lesson">← Previous: Lesson 1.2 — Generics</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_04.html" class="next-lesson">Next: Lesson 2.1 — Delegates and Lambdas →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

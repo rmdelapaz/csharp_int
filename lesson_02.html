@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Write reusable, type-safe code in C# with generics: generic classes, generic methods, and constraints.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 1.2: Generics - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 1: Writing Robust Code</a></li>
+            <li aria-current="page">Lesson 1.2: Generics</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 1.2: Generics</h1>
+                <p class="lead">You've used <code>List&lt;T&gt;</code> since the intro course. Now you'll learn the feature that makes it work — <strong>generics</strong> — and write your own reusable, type-safe classes and methods that work with any type.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain the problem generics solve: reuse <em>and</em> type safety together</li>
+                        <li>Write a generic class with a type parameter <code>&lt;T&gt;</code></li>
+                        <li>Write generic methods, including with multiple type parameters</li>
+                        <li>Restrict type parameters with <code>where</code> constraints</li>
+                        <li>Recognize the generic types already used throughout .NET</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Build your own generic container and utility methods.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">The Problem Generics Solve</a></li>
+                        <li><a href="#generic-class" class="toc-link">Generic Classes</a></li>
+                        <li><a href="#generic-method" class="toc-link">Generic Methods</a></li>
+                        <li><a href="#multiple" class="toc-link">Multiple Type Parameters</a></li>
+                        <li><a href="#constraints" class="toc-link">Constraints with <code>where</code></a></li>
+                        <li><a href="#builtin" class="toc-link">Generics in .NET</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: The problem -->
+            <section id="introduction" class="lesson-section">
+                <h2>The Problem Generics Solve</h2>
+                <p>Imagine writing a simple "box" that holds one value. Without generics, you have two bad options.</p>
+
+                <p><strong>Option 1 — a separate class per type.</strong> Endless duplication:</p>
+                <pre><code class="language-csharp">class IntBox    { public int Value; }
+class StringBox { public string Value; }
+class DogBox    { public Dog Value; }
+// ...a new class for every type, forever</code></pre>
+
+                <p><strong>Option 2 — hold everything as <code>object</code>.</strong> One class, but you lose type safety and must cast:</p>
+                <pre><code class="language-csharp">class Box { public object Value; }
+
+Box b = new Box();
+b.Value = 42;
+int n = (int)b.Value;        // must cast back — and the compiler can't protect you
+string s = (string)b.Value;  // compiles, but CRASHES at runtime — it's really an int</code></pre>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Generics:</strong> a way to write a class or method with a <em>placeholder type</em>, filled in when the code is used — giving you one reusable definition that stays fully type-safe.</p>
+                </div>
+
+                <p>Generics give you the best of both: write the box <strong>once</strong>, use it with <strong>any</strong> type, and keep the compiler's type checking. That's exactly what <code>List&lt;T&gt;</code> is — one class that safely stores ints, strings, or your own objects.</p>
+            </section>
+
+            <!-- Section 2: Generic class -->
+            <section id="generic-class" class="lesson-section">
+                <h2>Generic Classes</h2>
+                <p>You add a <strong>type parameter</strong> in angle brackets after the class name. By convention it's called <code>T</code> (for "type"):</p>
+
+                <pre><code class="language-csharp">class Box&lt;T&gt;
+{
+    public T Value { get; set; }
+
+    public void Show()
+    {
+        Console.WriteLine($"Box contains: {Value}");
+    }
+}</code></pre>
+
+                <p>Inside the class, <code>T</code> stands in for whatever type the caller chooses. You pick that type when you create an object:</p>
+
+                <pre><code class="language-csharp">Box&lt;int&gt; intBox = new Box&lt;int&gt;();
+intBox.Value = 42;
+intBox.Show();               // Box contains: 42
+
+Box&lt;string&gt; textBox = new Box&lt;string&gt;();
+textBox.Value = "hello";
+textBox.Show();              // Box contains: hello
+
+// intBox.Value = "oops";    // ❌ Compile error — intBox only holds ints</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Type safety, kept</h4>
+                    <p>A <code>Box&lt;int&gt;</code> only accepts ints; a <code>Box&lt;string&gt;</code> only accepts strings — enforced at compile time, with no casting needed when you read <code>Value</code> back. One class definition, unlimited type-safe variations.</p>
+                </div>
+
+                <div class="mermaid">
+                    graph TD
+                    A["Box⟨T⟩<br/>(one definition)"] --> B["Box⟨int⟩"]
+                    A --> C["Box⟨string⟩"]
+                    A --> D["Box⟨Dog⟩"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style B fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style C fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style D fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 3: Generic methods -->
+            <section id="generic-method" class="lesson-section">
+                <h2>Generic Methods</h2>
+                <p>A single method can be generic too, even in a non-generic class. Put the type parameter after the method name:</p>
+
+                <pre><code class="language-csharp">void Swap&lt;T&gt;(ref T a, ref T b)
+{
+    T temp = a;
+    a = b;
+    b = temp;
+}
+
+int x = 1, y = 2;
+Swap&lt;int&gt;(ref x, ref y);
+Console.WriteLine($"{x}, {y}");   // 2, 1
+
+string first = "A", second = "B";
+Swap(ref first, ref second);      // type inferred — no &lt;string&gt; needed
+Console.WriteLine($"{first}, {second}");   // B, A</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Type inference</h4>
+                    <p>Notice the second call is just <code>Swap(ref first, ref second)</code> — no <code>&lt;string&gt;</code>. C# usually <strong>infers</strong> the type parameter from the arguments you pass, so you rarely have to write it explicitly. (The <code>ref</code> keyword here passes variables by reference so the swap is visible to the caller.)</p>
+                </div>
+
+                <p>Here's a more practical generic method — printing any array of any type:</p>
+                <pre><code class="language-csharp">void PrintAll&lt;T&gt;(T[] items)
+{
+    foreach (T item in items)
+    {
+        Console.WriteLine(item);
+    }
+}
+
+PrintAll(new int[] { 1, 2, 3 });
+PrintAll(new string[] { "a", "b" });</code></pre>
+            </section>
+
+            <!-- Section 4: Multiple type parameters -->
+            <section id="multiple" class="lesson-section">
+                <h2>Multiple Type Parameters</h2>
+                <p>A generic type or method can have more than one type parameter, separated by commas. A classic example is a "pair" holding two values of possibly different types:</p>
+
+                <pre><code class="language-csharp">class Pair&lt;TFirst, TSecond&gt;
+{
+    public TFirst First { get; set; }
+    public TSecond Second { get; set; }
+}
+
+Pair&lt;string, int&gt; age = new Pair&lt;string, int&gt;
+{
+    First = "Ada",
+    Second = 30
+};
+
+Console.WriteLine($"{age.First} is {age.Second}");   // Ada is 30</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Naming conventions</h4>
+                    <p>With a single type parameter, <code>T</code> is standard. With several, use descriptive names prefixed with <code>T</code>: <code>TKey</code>, <code>TValue</code>, <code>TFirst</code>, <code>TSecond</code>. You'll see exactly <code>TKey</code>/<code>TValue</code> in <code>Dictionary&lt;TKey, TValue&gt;</code>, coming up in the next lesson.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Constraints -->
+            <section id="constraints" class="lesson-section">
+                <h2>Constraints with <code>where</code></h2>
+                <p>Sometimes a generic method needs to <em>do</em> something with <code>T</code> — compare it, create it, or call a method on it. But if <code>T</code> could be <em>anything</em>, the compiler can't assume those abilities. A <strong>constraint</strong> restricts what types are allowed, unlocking their capabilities.</p>
+
+                <p>This won't compile, because not every type supports <code>&gt;</code>:</p>
+                <pre><code class="language-csharp">T Max&lt;T&gt;(T a, T b)
+{
+    return a &gt; b ? a : b;   // ❌ Error — C# doesn't know T supports &gt;
+}</code></pre>
+
+                <p>Add <code>where T : IComparable&lt;T&gt;</code> to promise that <code>T</code> can be compared, then use its <code>CompareTo</code> method:</p>
+                <pre><code class="language-csharp">T Max&lt;T&gt;(T a, T b) where T : IComparable&lt;T&gt;
+{
+    return a.CompareTo(b) &gt; 0 ? a : b;
+}
+
+Console.WriteLine(Max(3, 9));            // 9
+Console.WriteLine(Max("apple", "pear")); // pear (alphabetical)</code></pre>
+
+                <p>Common constraints you'll encounter:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Constraint</th><th>Means "T must…"</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>where T : class</code></td><td>be a reference type</td></tr>
+                            <tr><td><code>where T : struct</code></td><td>be a value type</td></tr>
+                            <tr><td><code>where T : new()</code></td><td>have a public parameterless constructor (so you can <code>new T()</code>)</td></tr>
+                            <tr><td><code>where T : SomeClass</code></td><td>be, or derive from, <code>SomeClass</code></td></tr>
+                            <tr><td><code>where T : ISomeInterface</code></td><td>implement <code>ISomeInterface</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Constraints connect to what you know</h4>
+                    <p>Notice how constraints build on the intro's OOP: <code>where T : IComparable&lt;T&gt;</code> uses the interface you saw in Lesson 5.2, and <code>where T : Animal</code> uses inheritance. Constraints let generic code safely rely on those capabilities.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Generics in .NET -->
+            <section id="builtin" class="lesson-section">
+                <h2>Generics in .NET</h2>
+                <p>You've been standing on generics the whole time. .NET's collections are generic, which is why they're both flexible and type-safe:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Generic type</th><th>What it is</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>List&lt;T&gt;</code></td><td>A resizable list of <code>T</code> (from the intro course)</td></tr>
+                            <tr><td><code>Dictionary&lt;TKey, TValue&gt;</code></td><td>Key/value lookups (next lesson)</td></tr>
+                            <tr><td><code>Nullable&lt;T&gt;</code> (<code>T?</code>)</td><td>A value type that can also be <code>null</code></td></tr>
+                            <tr><td><code>Func&lt;T, TResult&gt;</code></td><td>A function reference (Module 2)</td></tr>
+                            <tr><td><code>Task&lt;T&gt;</code></td><td>An async operation that returns a <code>T</code> (Module 4)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <blockquote>
+                    <strong>💡 Why it matters:</strong> Recognizing the <code>&lt;T&gt;</code> pattern means you can read and use huge parts of .NET confidently. When you see <code>&lt;...&gt;</code>, you're looking at "this type, specialized to work with <em>that</em> type."
+                </blockquote>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Generic Stack</h3>
+                    <p><strong>Objective:</strong> Build a small generic container and a generic utility method.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>GenericsLab</code>.</li>
+                        <li>Write a generic class <code>SimpleStack&lt;T&gt;</code> backed by a <code>List&lt;T&gt;</code>. Give it <code>Push(T item)</code>, <code>T Pop()</code> (remove and return the last item), and a <code>Count</code> property.</li>
+                        <li>Use it with two different types (e.g. a <code>SimpleStack&lt;int&gt;</code> and a <code>SimpleStack&lt;string&gt;</code>).</li>
+                        <li><strong>Bonus:</strong> Write a generic method <code>T First&lt;T&gt;(List&lt;T&gt; items)</code> that returns the first element, throwing an <code>InvalidOperationException</code> (from Lesson 1.1!) if the list is empty.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">var numbers = new SimpleStack&lt;int&gt;();
+numbers.Push(10);
+numbers.Push(20);
+Console.WriteLine(numbers.Pop());   // 20
+Console.WriteLine(numbers.Count);   // 1
+
+class SimpleStack&lt;T&gt;
+{
+    private List&lt;T&gt; _items = new List&lt;T&gt;();
+
+    // TODO: Push(T item)
+    // TODO: T Pop()
+    // TODO: int Count { get; }
+}</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>Push</code> is <code>_items.Add(item);</code>. For <code>Pop</code>, grab the last item at index <code>_items.Count - 1</code>, remove it with <code>RemoveAt</code>, and return it. <code>Count</code> is an expression-bodied property: <code>public int Count =&gt; _items.Count;</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">var numbers = new SimpleStack&lt;int&gt;();
+numbers.Push(10);
+numbers.Push(20);
+Console.WriteLine(numbers.Pop());   // 20
+Console.WriteLine(numbers.Count);   // 1
+
+var words = new SimpleStack&lt;string&gt;();
+words.Push("first");
+words.Push("second");
+Console.WriteLine(words.Pop());     // second
+
+Console.WriteLine(First(new List&lt;int&gt; { 5, 6, 7 }));   // 5
+
+class SimpleStack&lt;T&gt;
+{
+    private List&lt;T&gt; _items = new List&lt;T&gt;();
+
+    public int Count =&gt; _items.Count;
+
+    public void Push(T item)
+    {
+        _items.Add(item);
+    }
+
+    public T Pop()
+    {
+        if (_items.Count == 0)
+        {
+            throw new InvalidOperationException("The stack is empty.");
+        }
+        T last = _items[_items.Count - 1];
+        _items.RemoveAt(_items.Count - 1);
+        return last;
+    }
+}
+
+// Bonus generic method (top-level methods must appear before type declarations)
+T First&lt;T&gt;(List&lt;T&gt; items)
+{
+    if (items.Count == 0)
+    {
+        throw new InvalidOperationException("The list is empty.");
+    }
+    return items[0];
+}</code></pre>
+                        <p>Output:</p>
+                        <pre><code>20
+1
+second
+5</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What is the main advantage of generics over storing values as <code>object</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Generics give reuse AND compile-time type safety with no casting.">
+                                A) Reuse plus compile-time type safety, without casting.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Generics aren't about shorter names.">
+                                B) They make variable names shorter.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="They don't remove the need for types — they make types safer and reusable.">
+                                C) They let you avoid using types entirely.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> In <code>Box&lt;T&gt;</code>, what does <code>T</code> represent?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It's not a fixed type — it's chosen by the caller.">
+                                A) Always the <code>int</code> type.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! T is a placeholder type filled in when the class is used (e.g. Box<string>).">
+                                B) A placeholder type, chosen when the class is used.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="T is a type parameter, not a variable holding data.">
+                                C) A variable that stores the box's value.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does <code>where T : IComparable&lt;T&gt;</code> do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It restricts T rather than allowing literally any type.">
+                                A) Lets <code>T</code> be absolutely any type.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! The constraint requires T to implement IComparable<T>, so you can call CompareTo on it.">
+                                B) Requires <code>T</code> to be comparable, so you can call <code>CompareTo</code> on it.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Constraints don't convert types; they restrict which types are allowed.">
+                                C) Converts <code>T</code> into an <code>int</code>.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Generics</strong> let you write a class or method once with a placeholder type, keeping full type safety and avoiding casts.</li>
+                        <li>Declare a generic class with <code>class Name&lt;T&gt;</code> and use <code>T</code> as a stand-in type inside it.</li>
+                        <li>Generic <strong>methods</strong> put the parameter after the method name; C# often <strong>infers</strong> it from the arguments.</li>
+                        <li>Use multiple type parameters (<code>&lt;TKey, TValue&gt;</code>) and name them descriptively with a <code>T</code> prefix.</li>
+                        <li><code>where</code> <strong>constraints</strong> restrict <code>T</code> (e.g. <code>: IComparable&lt;T&gt;</code>, <code>: new()</code>) so generic code can safely use those capabilities.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/types/generics" target="_blank" rel="noopener">Generics — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/generics/constraints-on-type-parameters" target="_blank" rel="noopener">Constraints on type parameters</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/generics/" target="_blank" rel="noopener">Generics in .NET — overview</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>Generics power all of .NET's collections. In <strong>Lesson 1.3: Collections in Depth</strong>, you'll go beyond <code>List&lt;T&gt;</code> to dictionaries, sets, queues, and stacks — and learn how to pick the right one for each job.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Generics unlocked!</h3>
+                    <p>You can now write reusable, type-safe building blocks. Next: the collections built on them.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_01.html" class="prev-lesson">← Previous: Lesson 1.1 — Exception Handling</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_03.html" class="next-lesson">Next: Lesson 1.3 — Collections in Depth →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

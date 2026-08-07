@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Capstone: build a complete Expense Tracker combining records, generics, LINQ, exceptions, JSON files, async, a web API, and unit tests.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 5.3: Capstone Project - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 5: Real-World C# and Quality</a></li>
+            <li aria-current="page">Lesson 5.3: Capstone Project</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 5.3: Capstone Project</h1>
+                <p class="lead">This is the finale. You'll build a complete <strong>Expense Tracker</strong> that uses <em>every</em> major skill from this course — records, generics, LINQ, exceptions, JSON files, async, a live web API, and unit tests — organized into clean, layered code.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Combine the whole course into one cohesive application</li>
+                        <li>Organize a program into layers: models, storage, services, and UI</li>
+                        <li>Persist data with JSON files and fetch live data from a web API</li>
+                        <li>Write unit tests for your core logic</li>
+                        <li>Extend a real application with new features on your own</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 120 minutes</p>
+                    <p><strong>Project:</strong> A complete, layered Expense Tracker console app.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What We're Building</a></li>
+                        <li><a href="#architecture" class="toc-link">Planning the Architecture</a></li>
+                        <li><a href="#model" class="toc-link">Step 1: The Model</a></li>
+                        <li><a href="#storage" class="toc-link">Step 2: JSON Storage</a></li>
+                        <li><a href="#service" class="toc-link">Step 3: The Service (LINQ)</a></li>
+                        <li><a href="#api" class="toc-link">Step 4: Live Currency (Async API)</a></li>
+                        <li><a href="#ui" class="toc-link">Step 5: The Menu</a></li>
+                        <li><a href="#tests" class="toc-link">Step 6: Testing</a></li>
+                        <li><a href="#exercise" class="toc-link">Make It Your Own</a></li>
+                        <li><a href="#summary" class="toc-link">Course Wrap-Up</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What we're building -->
+            <section id="introduction" class="lesson-section">
+                <h2>What We're Building</h2>
+                <p>An <strong>Expense Tracker</strong>: a console app where you record expenses, see summaries, save them between runs, and even convert your total into another currency using live exchange rates from the internet.</p>
+
+                <p>Every feature exercises skills from this course. Here's the map:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Feature</th><th>Concepts used</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Expense data model</td><td>Records (3.1)</td></tr>
+                            <tr><td>Save / load expenses</td><td>Files (4.1) + JSON (4.2)</td></tr>
+                            <tr><td>Generic file storage helper</td><td>Generics (1.2)</td></tr>
+                            <tr><td>Summaries &amp; reports</td><td>LINQ (2.3), collections (1.3)</td></tr>
+                            <tr><td>Categorizing / formatting</td><td>Pattern matching (3.2)</td></tr>
+                            <tr><td>Validation &amp; safety</td><td>Exceptions (1.1), nullable (3.3)</td></tr>
+                            <tr><td>Live currency conversion</td><td>Async (4.3) + HttpClient (5.1)</td></tr>
+                            <tr><td>Verifying the logic</td><td>Unit tests (5.2)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 2: Architecture -->
+            <section id="architecture" class="lesson-section">
+                <h2>Planning the Architecture</h2>
+                <p>Professional apps aren't one giant file — they're organized into <strong>layers</strong>, each with one responsibility. This makes code easier to understand, change, and test. Our tracker has four layers:</p>
+
+                <div class="mermaid">
+                    graph TD
+                    UI["UI layer<br/>menu loop &amp; input"] --> SVC["Service layer<br/>logic, LINQ summaries"]
+                    SVC --> STORE["Storage layer<br/>JSON file save/load"]
+                    SVC --> API["API client<br/>live exchange rates"]
+                    SVC --> MODEL["Model<br/>Expense record"]
+                    style UI fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style MODEL fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style STORE fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style API fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>The key principle: the <strong>UI doesn't touch files or the network directly</strong> — it asks the service, which coordinates storage, the API, and the model. That separation is what makes the logic testable in Step 6.</p>
+            </section>
+
+            <!-- Section 3: Model -->
+            <section id="model" class="lesson-section">
+                <h2>Step 1: The Model</h2>
+                <p>Start with the data. An expense is pure data, so it's a <strong>record</strong> (Lesson 3.1) — value equality and immutability for free:</p>
+
+                <pre><code class="language-csharp">// Model/Expense.cs
+public record Expense(string Description, string Category, decimal Amount, DateTime Date);</code></pre>
+
+                <p>That single line gives us a clean, immutable type with a readable <code>ToString</code> and value equality — perfect for storing and comparing.</p>
+            </section>
+
+            <!-- Section 4: Storage -->
+            <section id="storage" class="lesson-section">
+                <h2>Step 2: JSON Storage (Generic)</h2>
+                <p>Next, persistence. We'll write a <strong>generic</strong> (Lesson 1.2) storage helper that can save and load a list of <em>any</em> type as JSON — reusable well beyond expenses:</p>
+
+                <pre><code class="language-csharp">// Storage/JsonStore.cs
+using System.Text.Json;
+
+public class JsonStore&lt;T&gt;
+{
+    private readonly string _path;
+    private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
+
+    public JsonStore(string path) =&gt; _path = path;
+
+    public void Save(List&lt;T&gt; items)
+    {
+        string json = JsonSerializer.Serialize(items, _options);
+        File.WriteAllText(_path, json);
+    }
+
+    public List&lt;T&gt; Load()
+    {
+        if (!File.Exists(_path))
+        {
+            return new List&lt;T&gt;();          // nothing saved yet — start empty
+        }
+
+        try
+        {
+            string json = File.ReadAllText(_path);
+            return JsonSerializer.Deserialize&lt;List&lt;T&gt;&gt;(json) ?? new List&lt;T&gt;();
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine("Warning: saved data was corrupt; starting fresh.");
+            return new List&lt;T&gt;();
+        }
+    }
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Concepts stacked</h4>
+                    <p>This one class uses <strong>generics</strong> (works for any <code>T</code>), <strong>files</strong> and <strong>JSON</strong> (4.1/4.2), <strong>exception handling</strong> (1.1) for corrupt data, and <strong>null handling</strong> (3.3) with <code>?? new List&lt;T&gt;()</code>. Because it's generic, you could reuse it to store tasks, contacts, anything.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Service -->
+            <section id="service" class="lesson-section">
+                <h2>Step 3: The Service (LINQ &amp; Validation)</h2>
+                <p>The service holds the app's logic: adding validated expenses and producing summaries with <strong>LINQ</strong> (Lesson 2.3). It keeps the in-memory list and delegates persistence to the store.</p>
+
+                <pre><code class="language-csharp">// Services/ExpenseService.cs
+public class ExpenseService
+{
+    private readonly JsonStore&lt;Expense&gt; _store;
+    private List&lt;Expense&gt; _expenses;
+
+    public ExpenseService(JsonStore&lt;Expense&gt; store)
+    {
+        _store = store;
+        _expenses = _store.Load();          // load saved data on startup
+    }
+
+    public IReadOnlyList&lt;Expense&gt; All =&gt; _expenses;
+
+    public void Add(string description, string category, decimal amount)
+    {
+        // Validation — fail fast with clear exceptions (Lesson 1.1)
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException("Description is required.");
+        if (amount &lt;= 0)
+            throw new ArgumentException("Amount must be positive.");
+
+        _expenses.Add(new Expense(description, category, amount, DateTime.Now));
+        _store.Save(_expenses);             // persist after each change
+    }
+
+    public decimal Total() =&gt; _expenses.Sum(e =&gt; e.Amount);
+
+    // Group by category and total each — LINQ (2.3) + collections (1.3)
+    public Dictionary&lt;string, decimal&gt; TotalsByCategory() =&gt;
+        _expenses
+            .GroupBy(e =&gt; e.Category)
+            .ToDictionary(g =&gt; g.Key, g =&gt; g.Sum(e =&gt; e.Amount));
+
+    public IEnumerable&lt;Expense&gt; TopExpenses(int count) =&gt;
+        _expenses.OrderByDescending(e =&gt; e.Amount).Take(count);
+}</code></pre>
+
+                <p>And a touch of <strong>pattern matching</strong> (Lesson 3.2) to label spending levels for display:</p>
+                <pre><code class="language-csharp">// A pure helper — easy to unit test in Step 6
+public static string SpendingLevel(decimal total) =&gt; total switch
+{
+    &lt;= 0        =&gt; "none",
+    &lt; 100m      =&gt; "low",
+    &lt; 1000m     =&gt; "moderate",
+    _           =&gt; "high"
+};</code></pre>
+            </section>
+
+            <!-- Section 6: API -->
+            <section id="api" class="lesson-section">
+                <h2>Step 4: Live Currency (Async API)</h2>
+                <p>Now the online feature: convert the total into another currency using live rates, with <strong>async</strong> + <strong>HttpClient</strong> + <strong>JSON</strong> (Lessons 4.3, 5.1, 4.2):</p>
+
+                <pre><code class="language-csharp">// Services/CurrencyClient.cs
+using System.Net.Http.Json;
+
+// Model the shape of the API's JSON response
+public record RatesResponse(string Base_code, Dictionary&lt;string, decimal&gt; Rates);
+
+public class CurrencyClient
+{
+    private readonly HttpClient _client = new();   // one shared client (Lesson 5.1)
+
+    public async Task&lt;decimal&gt; ConvertAsync(decimal amountUsd, string toCurrency)
+    {
+        var data = await _client.GetFromJsonAsync&lt;RatesResponse&gt;(
+            "https://open.er-api.com/v6/latest/USD");
+
+        if (data is null || !data.Rates.TryGetValue(toCurrency, out decimal rate))
+        {
+            throw new InvalidOperationException($"No rate found for {toCurrency}.");
+        }
+        return amountUsd * rate;
+    }
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Notice the safety</h4>
+                    <p>This method guards a possibly-null response (3.3), uses <code>TryGetValue</code> on a dictionary (1.3), and throws a clear exception (1.1) when a currency is unknown — then the UI catches network errors around the call. Robustness, layered in.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: UI -->
+            <section id="ui" class="lesson-section">
+                <h2>Step 5: The Menu</h2>
+                <p>Finally the UI ties it together with a menu loop (<code>async</code> so it can call the API). It only talks to the <em>service</em> and <em>client</em> — never files or the network directly:</p>
+
+                <pre><code class="language-csharp">// Program.cs
+var store = new JsonStore&lt;Expense&gt;("expenses.json");
+var service = new ExpenseService(store);
+var currency = new CurrencyClient();
+
+bool running = true;
+while (running)
+{
+    Console.WriteLine("\n===== EXPENSE TRACKER =====");
+    Console.WriteLine("1. Add expense");
+    Console.WriteLine("2. Show summary");
+    Console.WriteLine("3. Convert total to EUR (live)");
+    Console.WriteLine("4. Quit");
+    Console.Write("Choose: ");
+
+    switch (Console.ReadLine())
+    {
+        case "1":
+            try
+            {
+                Console.Write("Description: ");
+                string desc = Console.ReadLine() ?? "";
+                Console.Write("Category: ");
+                string cat = Console.ReadLine() ?? "Other";
+                Console.Write("Amount: ");
+                decimal amount = decimal.Parse(Console.ReadLine() ?? "0");
+
+                service.Add(desc, cat, amount);
+                Console.WriteLine("Added!");
+            }
+            catch (ArgumentException ex) { Console.WriteLine($"Invalid: {ex.Message}"); }
+            catch (FormatException)      { Console.WriteLine("Amount must be a number."); }
+            break;
+
+        case "2":
+            Console.WriteLine($"Total: {service.Total():C} " +
+                              $"({ExpenseService.SpendingLevel(service.Total())})");
+            foreach (var (category, sum) in service.TotalsByCategory())
+            {
+                Console.WriteLine($"  {category}: {sum:C}");
+            }
+            break;
+
+        case "3":
+            try
+            {
+                decimal eur = await currency.ConvertAsync(service.Total(), "EUR");
+                Console.WriteLine($"Total in EUR: {eur:F2}");
+            }
+            catch (HttpRequestException) { Console.WriteLine("Couldn't reach the rate service."); }
+            catch (InvalidOperationException ex) { Console.WriteLine(ex.Message); }
+            break;
+
+        case "4":
+            running = false;
+            break;
+
+        default:
+            Console.WriteLine("Please choose 1-4.");
+            break;
+    }
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Look at everything working together</h4>
+                    <p>A menu loop routes with a <code>switch</code>; input is validated and parsed with exception handling; summaries come from LINQ via the service; deconstruction (<code>var (category, sum)</code>) unpacks dictionary entries; and option 3 awaits a live web API. Data persists automatically because the service saves after every change.</p>
+                </div>
+            </section>
+
+            <!-- Section 8: Tests -->
+            <section id="tests" class="lesson-section">
+                <h2>Step 6: Testing</h2>
+                <p>Because the logic lives in the service (not tangled into the UI), it's straightforward to test with <strong>xUnit</strong> (Lesson 5.2). We test the pure, deterministic parts — validation and calculations:</p>
+
+                <pre><code class="language-csharp">// Tests/ExpenseServiceTests.cs
+using Xunit;
+
+public class ExpenseServiceTests
+{
+    private ExpenseService NewService() =&gt;
+        new ExpenseService(new JsonStore&lt;Expense&gt;(
+            Path.GetTempFileName()));   // temp file so tests don't clash
+
+    [Fact]
+    public void Add_ValidExpense_IncreasesTotal()
+    {
+        var service = NewService();
+        service.Add("Coffee", "Food", 4.50m);
+        Assert.Equal(4.50m, service.Total());
+    }
+
+    [Fact]
+    public void Add_NegativeAmount_Throws()
+    {
+        var service = NewService();
+        Assert.Throws&lt;ArgumentException&gt;(() =&gt; service.Add("Bad", "X", -5m));
+    }
+
+    [Theory]
+    [InlineData(0, "none")]
+    [InlineData(50, "low")]
+    [InlineData(500, "moderate")]
+    [InlineData(5000, "high")]
+    public void SpendingLevel_Categorizes(decimal total, string expected)
+    {
+        Assert.Equal(expected, ExpenseService.SpendingLevel(total));
+    }
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Why the design paid off</h4>
+                    <p>We can test <code>SpendingLevel</code> and <code>Add</code> without any UI, files we care about, or network — because the logic is separated from those concerns. That's the reward for layering the app: the important behavior is easy to verify. (Testing the live API call would use more advanced techniques like mocking, a great next topic.)</p>
+                </div>
+            </section>
+
+            <!-- Section 9: Make it your own -->
+            <section id="exercise" class="lesson-section">
+                <h2>Make It Your Own</h2>
+                <p>The tracker is a foundation. Extend it — each challenge reinforces skills from the course.</p>
+
+                <div class="card card-info">
+                    <h3>🏋️ Extension Challenges</h3>
+                    <ol>
+                        <li><strong>Delete an expense (⭐):</strong> Add a menu option that lists expenses with numbers and removes one by index (safe index checking, Lesson 1.3/1.1).</li>
+                        <li><strong>Filter by category (⭐):</strong> Add a report that prompts for a category and uses LINQ <code>Where</code> to show only those expenses (2.3).</li>
+                        <li><strong>This month only (⭐⭐):</strong> A summary that filters expenses to the current month using the <code>Date</code> field and LINQ.</li>
+                        <li><strong>Choose the target currency (⭐⭐):</strong> Let the user type any currency code and pass it to <code>ConvertAsync</code>; handle "unknown currency" gracefully (3.2 pattern matching for messages).</li>
+                        <li><strong>More tests (⭐⭐):</strong> Add tests for <code>TotalsByCategory</code> and <code>TopExpenses</code>, including edge cases (empty list).</li>
+                        <li><strong>Budgets &amp; events (⭐⭐⭐):</strong> Add a monthly budget and raise an <code>event</code> (Lesson 2.2) when spending exceeds it; have the UI subscribe and warn.</li>
+                    </ol>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ This is how real software grows</h4>
+                    <p>A clean, layered design makes each of these additions a small, local change — not a risky rewrite. That is the whole payoff of the practices in this course.</p>
+                </div>
+            </section>
+
+            <!-- Section 10: Course wrap-up -->
+            <section id="summary" class="lesson-section">
+                <h2>Course Wrap-Up</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 What this capstone demonstrates</h3>
+                    <p>In one application you combined:</p>
+                    <ul>
+                        <li><strong>Records</strong> for the data model, <strong>generics</strong> for reusable storage</li>
+                        <li><strong>Exceptions</strong> and <strong>nullable</strong> handling for robustness</li>
+                        <li><strong>LINQ</strong> and <strong>collections</strong> for summaries and reports</li>
+                        <li><strong>Pattern matching</strong> for concise categorization</li>
+                        <li><strong>Files + JSON</strong> for persistence, <strong>async + HttpClient</strong> for live data</li>
+                        <li><strong>Unit tests</strong> to prove the logic is correct</li>
+                    </ul>
+                </div>
+
+                <div class="card card-success">
+                    <h3>🎓 Look how far you've come</h3>
+                    <p>You began this course able to write basic C# programs with classes and OOP. You can now:</p>
+                    <ul>
+                        <li>Write robust code with exceptions, generics, and the right collections</li>
+                        <li>Program in a functional style with delegates, events, and LINQ</li>
+                        <li>Use modern features — records, pattern matching, and nullable reference types</li>
+                        <li>Work with files, JSON, and asynchronous operations</li>
+                        <li>Call web APIs and write unit tests</li>
+                        <li>Structure a real, layered application and grow it safely</li>
+                    </ul>
+                </div>
+
+                <h3>🚀 Where to Go Next</h3>
+                <ul>
+                    <li><strong>ASP.NET Core:</strong> build web APIs and web apps — a natural home for these skills</li>
+                    <li><strong>Entity Framework Core:</strong> work with databases using C# objects</li>
+                    <li><strong>Dependency injection &amp; <code>IHttpClientFactory</code>:</strong> structure larger applications</li>
+                    <li><strong>Advanced testing:</strong> mocking, integration tests, and test-driven development</li>
+                    <li><strong>Performance:</strong> spans, memory, and profiling for high-performance C#</li>
+                </ul>
+
+                <h3>📚 Recommended Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/" target="_blank" rel="noopener">Microsoft C# Documentation</a></li>
+                    <li><a href="https://learn.microsoft.com/aspnet/core/" target="_blank" rel="noopener">ASP.NET Core documentation</a></li>
+                    <li><a href="https://learn.microsoft.com/ef/core/" target="_blank" rel="noopener">Entity Framework Core documentation</a></li>
+                </ul>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎓 Congratulations — you've completed Intermediate C#!</h3>
+                    <p>You now write robust, modern, well-tested C# and can structure real applications. You have the foundation to build almost anything on the .NET platform. Keep building, keep testing, and keep learning. 🚀</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_14.html" class="prev-lesson">← Previous: Lesson 5.2 — Unit Testing</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="index.html" class="next-lesson">🎓 Back to Course Home →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

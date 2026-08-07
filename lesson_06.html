@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Query and transform collections elegantly in C# with LINQ: Where, Select, OrderBy, aggregation, and chaining.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 2.3: LINQ - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 2: Functional-Style C#</a></li>
+            <li aria-current="page">Lesson 2.3: LINQ</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 2.3: LINQ</h1>
+                <p class="lead">LINQ lets you filter, transform, sort, and summarize collections with short, readable code — replacing whole loops with a single expressive line. It's one of C#'s most beloved features, and it runs entirely on the lambdas you just learned.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what LINQ is and how it relates to lambdas</li>
+                        <li>Filter with <code>Where</code> and transform with <code>Select</code></li>
+                        <li>Sort with <code>OrderBy</code>, and summarize with <code>Count</code>, <code>Sum</code>, <code>Average</code>, etc.</li>
+                        <li>Chain operators into a readable query pipeline</li>
+                        <li>Understand deferred execution and when a query actually runs</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 75 minutes</p>
+                    <p><strong>Project:</strong> Answer real questions about a dataset with concise LINQ queries.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is LINQ?</a></li>
+                        <li><a href="#where" class="toc-link">Filtering with Where</a></li>
+                        <li><a href="#select" class="toc-link">Transforming with Select</a></li>
+                        <li><a href="#ordering" class="toc-link">Sorting and Chaining</a></li>
+                        <li><a href="#aggregation" class="toc-link">Aggregation and Element Operators</a></li>
+                        <li><a href="#deferred" class="toc-link">Deferred Execution</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is LINQ -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is LINQ?</h2>
+                <p><strong>LINQ</strong> (Language-Integrated Query) is a set of methods for querying collections directly in C#. Instead of writing a loop to filter or transform data, you describe <em>what</em> you want and let LINQ do the work.</p>
+
+                <p>Remember the <code>Filter</code> method you wrote in Lesson 2.1? LINQ's <code>Where</code> is exactly that — already built, and paired with dozens of related operators. Compare the two styles:</p>
+
+                <pre><code class="language-csharp">List&lt;int&gt; numbers = new List&lt;int&gt; { 1, 2, 3, 4, 5, 6 };
+
+// The old way: a loop
+List&lt;int&gt; evensLoop = new List&lt;int&gt;();
+foreach (int n in numbers)
+{
+    if (n % 2 == 0) evensLoop.Add(n);
+}
+
+// The LINQ way: one line
+List&lt;int&gt; evensLinq = numbers.Where(n =&gt; n % 2 == 0).ToList();</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 One <code>using</code> to remember</h4>
+                    <p>LINQ's methods live in <code>System.Linq</code>. Modern projects include it automatically; in older templates add <code>using System.Linq;</code> at the top. LINQ works on anything enumerable — arrays, <code>List&lt;T&gt;</code>, dictionaries, and more (the <code>IEnumerable&lt;T&gt;</code> interface from the intro).</p>
+                </div>
+
+                <p>We'll use this small dataset throughout the lesson:</p>
+                <pre><code class="language-csharp">record Product(string Name, string Category, decimal Price);
+
+List&lt;Product&gt; products = new List&lt;Product&gt;
+{
+    new Product("Keyboard", "Electronics", 45m),
+    new Product("Mouse", "Electronics", 25m),
+    new Product("Desk", "Furniture", 150m),
+    new Product("Chair", "Furniture", 85m),
+    new Product("Monitor", "Electronics", 200m)
+};</code></pre>
+                <p>(That <code>record</code> is a concise way to declare a small data type — you'll learn records properly in Lesson 3.1. For now, just read it as a <code>Product</code> with three properties.)</p>
+            </section>
+
+            <!-- Section 2: Where -->
+            <section id="where" class="lesson-section">
+                <h2>Filtering with <code>Where</code></h2>
+                <p><code>Where</code> keeps only the items that satisfy a condition. You pass it a lambda that takes an item and returns a <code>bool</code> — a <code>Func&lt;T, bool&gt;</code>, exactly like Lesson 2.1:</p>
+
+                <pre><code class="language-csharp">// All electronics
+var electronics = products.Where(p =&gt; p.Category == "Electronics");
+
+foreach (var p in electronics)
+{
+    Console.WriteLine(p.Name);
+}
+// Keyboard, Mouse, Monitor
+
+// Products under $100
+var affordable = products.Where(p =&gt; p.Price &lt; 100m);</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 <code>var</code> shines with LINQ</h4>
+                    <p>LINQ result types can be verbose, so <code>var</code> (from the intro) is idiomatic here — the compiler still knows the exact type. You'll see <code>var</code> used throughout real LINQ code.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Select -->
+            <section id="select" class="lesson-section">
+                <h2>Transforming with <code>Select</code></h2>
+                <p><code>Select</code> transforms each item into something else — it's a <code>Func&lt;T, TResult&gt;</code>. Use it to pull out one property, or to project into a new shape:</p>
+
+                <pre><code class="language-csharp">// Just the names (a sequence of strings)
+var names = products.Select(p =&gt; p.Name);
+Console.WriteLine(string.Join(", ", names));
+// Keyboard, Mouse, Desk, Chair, Monitor
+
+// Transform values — prices with 10% tax
+var withTax = products.Select(p =&gt; p.Price * 1.10m);
+
+// Project into a new shape (an anonymous object)
+var summaries = products.Select(p =&gt; new { p.Name, Discounted = p.Price * 0.9m });
+foreach (var s in summaries)
+{
+    Console.WriteLine($"{s.Name}: {s.Discounted:C}");
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Where vs. Select</h4>
+                    <p>Remember the difference with a sentence: <strong><code>Where</code> chooses which items</strong> to keep; <strong><code>Select</code> chooses what each item becomes</strong>. Filtering vs. transforming.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Ordering and chaining -->
+            <section id="ordering" class="lesson-section">
+                <h2>Sorting and Chaining</h2>
+                <p>Sort with <code>OrderBy</code> (ascending) or <code>OrderByDescending</code>, passing a lambda that selects the sort key. The real power is <strong>chaining</strong>: each operator returns a sequence, so you can pipe one into the next.</p>
+
+                <pre><code class="language-csharp">// Electronics under $100, cheapest first, names only
+var result = products
+    .Where(p =&gt; p.Category == "Electronics")
+    .Where(p =&gt; p.Price &lt; 100m)
+    .OrderBy(p =&gt; p.Price)
+    .Select(p =&gt; p.Name)
+    .ToList();
+
+Console.WriteLine(string.Join(", ", result));   // Mouse, Keyboard</code></pre>
+
+                <p>Read that top to bottom like a pipeline: filter to electronics → keep the cheap ones → sort by price → take the names → materialize to a list.</p>
+
+                <div class="mermaid">
+                    graph LR
+                    A["products"] --> B["Where<br/>category"]
+                    B --> C["Where<br/>price"]
+                    C --> D["OrderBy<br/>price"]
+                    D --> E["Select<br/>name"]
+                    E --> F["ToList"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style F fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Secondary sort with <code>ThenBy</code></h4>
+                    <p>To break ties, follow <code>OrderBy</code> with <code>ThenBy</code>: <code>products.OrderBy(p =&gt; p.Category).ThenBy(p =&gt; p.Price)</code> sorts by category, then by price within each category.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Aggregation -->
+            <section id="aggregation" class="lesson-section">
+                <h2>Aggregation and Element Operators</h2>
+                <p>LINQ can also reduce a whole sequence to a single answer, or grab a single element. These <em>run immediately</em> and return a value rather than a sequence.</p>
+
+                <h3>Aggregation</h3>
+                <pre><code class="language-csharp">Console.WriteLine(products.Count());                       // 5
+Console.WriteLine(products.Count(p =&gt; p.Price &gt; 50m));      // 3
+Console.WriteLine(products.Sum(p =&gt; p.Price));             // 505
+Console.WriteLine(products.Average(p =&gt; p.Price));         // 101
+Console.WriteLine(products.Max(p =&gt; p.Price));             // 200
+Console.WriteLine(products.Min(p =&gt; p.Price));             // 25</code></pre>
+
+                <h3>Finding elements</h3>
+                <pre><code class="language-csharp">// First match (throws if none found)
+Product firstFurniture = products.First(p =&gt; p.Category == "Furniture");
+
+// First match or null-ish default if none (safer)
+Product? cheap = products.FirstOrDefault(p =&gt; p.Price &lt; 10m);   // null — nothing under $10
+
+// Do any / do all items match?
+bool anyExpensive = products.Any(p =&gt; p.Price &gt; 150m);   // True
+bool allAffordable = products.All(p =&gt; p.Price &lt; 500m);  // True</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ <code>First</code> vs. <code>FirstOrDefault</code></h4>
+                    <p><code>First</code> throws an <code>InvalidOperationException</code> if nothing matches (recall Lesson 1.1); <code>FirstOrDefault</code> returns the type's default (<code>null</code> for reference types) instead. When a "no match" is possible and normal, prefer <code>FirstOrDefault</code> and check the result.</p>
+                </div>
+
+                <h3>Grouping</h3>
+                <pre><code class="language-csharp">// Count products per category
+var byCategory = products
+    .GroupBy(p =&gt; p.Category)
+    .Select(g =&gt; new { Category = g.Key, Count = g.Count() });
+
+foreach (var group in byCategory)
+{
+    Console.WriteLine($"{group.Category}: {group.Count}");
+}
+// Electronics: 3
+// Furniture: 2</code></pre>
+            </section>
+
+            <!-- Section 6: Deferred execution -->
+            <section id="deferred" class="lesson-section">
+                <h2>Deferred Execution</h2>
+                <p>Here's a subtle but important behavior: most LINQ operators (like <code>Where</code> and <code>Select</code>) don't run when you <em>define</em> the query — they run when you <em>iterate</em> it. This is called <strong>deferred execution</strong>.</p>
+
+                <pre><code class="language-csharp">var query = products.Where(p =&gt; p.Price &lt; 100m);   // nothing runs yet
+
+products.Add(new Product("Cable", "Electronics", 5m));   // added AFTER the query
+
+foreach (var p in query)   // NOW the query runs — and sees the new Cable
+{
+    Console.WriteLine(p.Name);
+}
+// Keyboard, Mouse, Chair, Cable</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ The query is a recipe, not a result</h4>
+                    <p>A LINQ query is a <em>description</em> of work. It re-runs every time you enumerate it, and reflects the data as it is <em>at that moment</em>. To capture a snapshot, force execution with <code>ToList()</code> (or <code>ToArray()</code>) — those run immediately and store the results.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ When to call <code>ToList()</code></h4>
+                    <p>Materialize with <code>ToList()</code> when you need a stable snapshot, will iterate the results multiple times, or want the work done once. Otherwise, leaving a query deferred can be more efficient — it only computes what you actually consume.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Query syntax exists too</h4>
+                    <p>C# also offers a SQL-like <em>query syntax</em>: <code>from p in products where p.Price &lt; 100 select p.Name</code>. It compiles to the same method calls shown here. The <strong>method syntax</strong> (with lambdas) in this lesson is the most common in practice, so we focus on it.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: Querying People</h3>
+                    <p><strong>Objective:</strong> Answer questions about a dataset using LINQ instead of loops.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>LinqLab</code>.</li>
+                        <li>Use the <code>Person</code> list in the starter code.</li>
+                        <li>Write LINQ queries to produce: (a) the names of everyone 18 or older, sorted alphabetically; (b) the average age; (c) how many people are in each city (<code>GroupBy</code>); (d) the oldest person's name.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">record Person(string Name, int Age, string City);
+
+List&lt;Person&gt; people = new List&lt;Person&gt;
+{
+    new Person("Ada", 36, "London"),
+    new Person("Grace", 45, "New York"),
+    new Person("Alan", 17, "London"),
+    new Person("Edsger", 61, "Austin"),
+    new Person("Katherine", 22, "New York")
+};
+
+// TODO (a): names of adults (Age &gt;= 18), sorted A-Z
+// TODO (b): average age
+// TODO (c): count of people per city
+// TODO (d): name of the oldest person</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>(a) <code>Where</code> → <code>OrderBy</code> → <code>Select</code>. (b) <code>people.Average(p =&gt; p.Age)</code>. (c) <code>GroupBy(p =&gt; p.City)</code> then select <code>g.Key</code> and <code>g.Count()</code>. (d) sort by age descending and take <code>First()</code>, or use <code>MaxBy(p =&gt; p.Age)</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">// (a) adult names, sorted
+var adults = people
+    .Where(p =&gt; p.Age &gt;= 18)
+    .OrderBy(p =&gt; p.Name)
+    .Select(p =&gt; p.Name)
+    .ToList();
+Console.WriteLine(string.Join(", ", adults));   // Ada, Edsger, Grace, Katherine
+
+// (b) average age
+Console.WriteLine($"Average age: {people.Average(p =&gt; p.Age):F1}");   // 36.2
+
+// (c) count per city
+var perCity = people
+    .GroupBy(p =&gt; p.City)
+    .Select(g =&gt; new { City = g.Key, Count = g.Count() });
+foreach (var c in perCity)
+{
+    Console.WriteLine($"{c.City}: {c.Count}");
+}
+// London: 2, New York: 2, Austin: 1
+
+// (d) oldest person
+var oldest = people.OrderByDescending(p =&gt; p.Age).First();
+Console.WriteLine($"Oldest: {oldest.Name}");    // Edsger</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Which LINQ operator keeps only items matching a condition?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Where filters a sequence to items where the lambda returns true.">
+                                A) <code>Where</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Select transforms each item; it doesn't filter.">
+                                B) <code>Select</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="OrderBy sorts; it doesn't remove items.">
+                                C) <code>OrderBy</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does <code>Select(p =&gt; p.Name)</code> produce?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't filter — every item is transformed.">
+                                A) Only the products whose name matches something.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Select transforms each item, here into just its Name — a sequence of names.">
+                                B) A sequence of each item's <code>Name</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Select returns a sequence, not a single count.">
+                                C) The number of products.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> With deferred execution, when does a <code>Where</code> query actually run?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Defining the query doesn't execute it.">
+                                A) The moment you write the query.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Deferred queries run when enumerated (e.g. in a foreach or on ToList()).">
+                                B) When you iterate it (e.g. <code>foreach</code> or <code>ToList()</code>).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It runs on demand, not on a timer.">
+                                C) Exactly one second after it's defined.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>LINQ</strong> queries collections with concise operators that take lambdas — the <code>Func</code>/<code>Predicate</code> delegates from Lesson 2.1.</li>
+                        <li><code>Where</code> filters (which items); <code>Select</code> transforms (what each becomes); <code>OrderBy</code>/<code>OrderByDescending</code> sort.</li>
+                        <li>Operators <strong>chain</strong> into readable pipelines; end with <code>ToList()</code>/<code>ToArray()</code> to materialize results.</li>
+                        <li>Aggregate with <code>Count</code>, <code>Sum</code>, <code>Average</code>, <code>Max</code>/<code>Min</code>; find with <code>First</code>/<code>FirstOrDefault</code>, <code>Any</code>/<code>All</code>; bucket with <code>GroupBy</code>.</li>
+                        <li><strong>Deferred execution:</strong> a query is a recipe that runs when enumerated — use <code>ToList()</code> for a stable snapshot.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/linq/" target="_blank" rel="noopener">LINQ in C# — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/linq/standard-query-operators/" target="_blank" rel="noopener">Standard query operators overview</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.linq.enumerable" target="_blank" rel="noopener">Enumerable methods — API reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>That completes <strong>Module 2</strong> — you can now express complex data operations in a line or two! In <strong>Module 3</strong>, we explore modern C# language features that make your code even more concise and safe, starting with <strong>Lesson 3.1: Records and Value Equality</strong> — the <code>record</code> you glimpsed in this lesson.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Module 2 complete!</h3>
+                    <p>Delegates, events, and LINQ — you now write expressive, functional-style C#. Next: modern language features.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_05.html" class="prev-lesson">← Previous: Lesson 2.2 — Events</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_07.html" class="next-lesson">Next: Lesson 3.1 — Records and Value Equality →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

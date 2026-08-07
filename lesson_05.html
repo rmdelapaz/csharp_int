@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Build the publisher/subscriber pattern in C# with events: declaring, raising, and subscribing with EventHandler and custom EventArgs.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 2.2: Events - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 2: Functional-Style C#</a></li>
+            <li aria-current="page">Lesson 2.2: Events</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 2.2: Events</h1>
+                <p class="lead">Events let an object announce "something happened!" and let any number of other objects react — without the announcer knowing who's listening. It's the pattern behind button clicks, notifications, and much of .NET.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain the publisher/subscriber pattern and how events build on delegates</li>
+                        <li>Declare and raise an event, and subscribe with <code>+=</code> / unsubscribe with <code>-=</code></li>
+                        <li>Use the standard <code>EventHandler</code> pattern</li>
+                        <li>Pass data to subscribers with a custom <code>EventArgs</code></li>
+                        <li>Explain why events are safer than exposing a plain delegate</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Build a publisher that notifies multiple subscribers when something changes.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">The Publisher/Subscriber Idea</a></li>
+                        <li><a href="#first-event" class="toc-link">A First Event</a></li>
+                        <li><a href="#subscribing" class="toc-link">Subscribing and Unsubscribing</a></li>
+                        <li><a href="#eventhandler" class="toc-link">The Standard EventHandler Pattern</a></li>
+                        <li><a href="#eventargs" class="toc-link">Passing Data with EventArgs</a></li>
+                        <li><a href="#why-events" class="toc-link">Why Events, Not Plain Delegates?</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: Pub/sub idea -->
+            <section id="introduction" class="lesson-section">
+                <h2>The Publisher/Subscriber Idea</h2>
+                <p>An <strong>event</strong> is a message an object sends when something notable happens. The object that raises the event is the <strong>publisher</strong>; objects that want to react are <strong>subscribers</strong>. The publisher doesn't know or care who is listening — it just broadcasts.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Event:</strong> a member of a class that lets other code <em>subscribe</em> to be notified when something happens. Built on delegates, an event can call many subscriber methods when it is <em>raised</em>.</p>
+                </div>
+
+                <p>Think of a newsletter. The publisher sends out an issue; every subscriber receives it. New readers can subscribe and existing ones can unsubscribe at any time, and the publisher never needs a hard-coded list of names.</p>
+
+                <div class="mermaid">
+                    graph TD
+                    P["Publisher<br/>raises an event"] --> S1["Subscriber A reacts"]
+                    P --> S2["Subscriber B reacts"]
+                    P --> S3["Subscriber C reacts"]
+                    style P fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style S1 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style S2 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style S3 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>Events build directly on the delegates from Lesson 2.1 — an event is essentially a carefully-guarded delegate that holds a list of subscriber methods to call.</p>
+            </section>
+
+            <!-- Section 2: A first event -->
+            <section id="first-event" class="lesson-section">
+                <h2>A First Event</h2>
+                <p>Let's build an alarm clock that announces when it rings. The publisher declares an event and <em>raises</em> it at the right moment:</p>
+
+                <pre><code class="language-csharp">class AlarmClock
+{
+    // Declare an event based on the Action delegate (no data payload)
+    public event Action Rang;
+
+    public void Tick()
+    {
+        Console.WriteLine("Tick...");
+        // Raise the event — notify all subscribers (if any)
+        Rang?.Invoke();
+    }
+}</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Always use <code>?.Invoke()</code> to raise</h4>
+                    <p>If <em>no one</em> has subscribed, the event is <code>null</code>, and calling it directly would throw a <code>NullReferenceException</code>. The null-conditional <code>?.Invoke()</code> safely does nothing when there are no subscribers — the standard, correct way to raise an event.</p>
+                </div>
+
+                <p>Now some subscribers react when the alarm rings:</p>
+                <pre><code class="language-csharp">AlarmClock clock = new AlarmClock();
+
+// Subscribe: add methods to be called when Rang is raised
+clock.Rang += () =&gt; Console.WriteLine("😴 Wake up!");
+clock.Rang += () =&gt; Console.WriteLine("☕ Starting the coffee machine.");
+
+clock.Tick();   // raises Rang → both subscribers run</code></pre>
+
+                <div class="card card-output">
+                    <h4>Output:</h4>
+                    <pre><code>Tick...
+😴 Wake up!
+☕ Starting the coffee machine.</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 3: Subscribing/unsubscribing -->
+            <section id="subscribing" class="lesson-section">
+                <h2>Subscribing and Unsubscribing</h2>
+                <p>You subscribe with <code>+=</code> and unsubscribe with <code>-=</code>. Multiple subscribers can attach, and they're all invoked in order when the event is raised (this is a <em>multicast</em> delegate under the hood).</p>
+
+                <pre><code class="language-csharp">void MorningRoutine() =&gt; Console.WriteLine("Getting up.");
+
+clock.Rang += MorningRoutine;   // subscribe a named method
+clock.Tick();                   // MorningRoutine runs
+
+clock.Rang -= MorningRoutine;   // unsubscribe
+clock.Tick();                   // MorningRoutine no longer runs</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 To unsubscribe, keep a reference</h4>
+                    <p>You can only <code>-=</code> a subscriber you can name — a named method or a lambda you stored in a variable. An inline lambda subscribed anonymously can't be removed later, because you have nothing to reference. If you'll need to unsubscribe, use a named method or save the lambda.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: EventHandler pattern -->
+            <section id="eventhandler" class="lesson-section">
+                <h2>The Standard <code>EventHandler</code> Pattern</h2>
+                <p>Using <code>Action</code> works, but .NET has a widely-followed convention for events that all its own APIs use. Following it makes your code familiar to every C# developer. The convention uses the built-in <code>EventHandler</code> delegate, whose subscribers take two parameters:</p>
+                <ul>
+                    <li><code>object sender</code> — the object that raised the event.</li>
+                    <li><code>EventArgs e</code> — data about the event (or <code>EventArgs.Empty</code> if none).</li>
+                </ul>
+
+                <pre><code class="language-csharp">class AlarmClock
+{
+    public event EventHandler Rang;   // the standard event delegate
+
+    public void Tick()
+    {
+        Console.WriteLine("Tick...");
+        Rang?.Invoke(this, EventArgs.Empty);   // 'this' is the sender
+    }
+}</code></pre>
+
+                <pre><code class="language-csharp">AlarmClock clock = new AlarmClock();
+
+clock.Rang += (sender, e) =&gt; Console.WriteLine("Wake up!");
+clock.Tick();</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Why follow the convention?</h4>
+                    <p>Every event in the .NET UI frameworks, timers, and libraries uses this <code>(sender, e)</code> shape. Matching it means your events feel native, your subscribers know what to expect, and tooling works smoothly.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: EventArgs -->
+            <section id="eventargs" class="lesson-section">
+                <h2>Passing Data with <code>EventArgs</code></h2>
+                <p>Often subscribers need details about <em>what</em> happened. You provide them by creating a class that derives from <code>EventArgs</code> (inheritance from the intro course, again) and using the generic <code>EventHandler&lt;T&gt;</code>:</p>
+
+                <pre><code class="language-csharp">// 1) Define a data payload
+class TemperatureChangedEventArgs : EventArgs
+{
+    public double NewTemperature { get; }
+
+    public TemperatureChangedEventArgs(double newTemperature)
+    {
+        NewTemperature = newTemperature;
+    }
+}
+
+// 2) Publisher raises the event with data
+class Thermostat
+{
+    public event EventHandler&lt;TemperatureChangedEventArgs&gt; TemperatureChanged;
+
+    private double _temperature;
+    public double Temperature
+    {
+        get =&gt; _temperature;
+        set
+        {
+            _temperature = value;
+            TemperatureChanged?.Invoke(this, new TemperatureChangedEventArgs(value));
+        }
+    }
+}</code></pre>
+
+                <pre><code class="language-csharp">Thermostat thermostat = new Thermostat();
+
+thermostat.TemperatureChanged += (sender, e) =&gt;
+{
+    Console.WriteLine($"Temperature is now {e.NewTemperature}°C");
+    if (e.NewTemperature &gt; 30)
+    {
+        Console.WriteLine("⚠️ It's getting hot!");
+    }
+};
+
+thermostat.Temperature = 22;   // raises the event
+thermostat.Temperature = 35;   // raises again → warning fires</code></pre>
+
+                <div class="card card-output">
+                    <h4>Output:</h4>
+                    <pre><code>Temperature is now 22°C
+Temperature is now 35°C
+⚠️ It's getting hot!</code></pre>
+                </div>
+
+                <p>The subscriber reads <code>e.NewTemperature</code> to get the detail it needs. Setting the property is all it takes to notify everyone listening.</p>
+            </section>
+
+            <!-- Section 6: Why events -->
+            <section id="why-events" class="lesson-section">
+                <h2>Why Events, Not Plain Delegates?</h2>
+                <p>An event is a delegate with guardrails. If you exposed a public delegate <em>field</em> instead, any outside code could misuse it:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Outside code could…</th><th>Public delegate field</th><th><code>event</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Subscribe (<code>+=</code>) / unsubscribe (<code>-=</code>)</td><td>Yes</td><td>Yes ✅</td></tr>
+                            <tr><td><strong>Raise</strong> it (invoke it)</td><td>Yes ⚠️</td><td>No — only the declaring class ✅</td></tr>
+                            <tr><td><strong>Overwrite</strong> all subscribers (<code>=</code>)</td><td>Yes ⚠️</td><td>No ✅</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <blockquote>
+                    <strong>💡 The point of <code>event</code>:</strong> It lets outsiders <em>subscribe and unsubscribe</em>, but only the publishing class can <em>raise</em> the event or clear its subscribers. That encapsulation (a theme from the intro's OOP) prevents a whole category of bugs — subscribers can't accidentally trigger or wipe each other.</p>
+                </blockquote>
+
+                <div class="card card-success">
+                    <h4>✅ Rule of thumb</h4>
+                    <p>When you want to let other code react to something in your class, expose an <code>event</code> — not a public delegate. Raise it from inside the class with <code>?.Invoke(...)</code>.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Bank Account with Notifications</h3>
+                    <p><strong>Objective:</strong> Build a publisher that raises an event (with data) that multiple subscribers react to.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>AccountEvents</code>.</li>
+                        <li>Create <code>DepositEventArgs : EventArgs</code> with an <code>Amount</code> property and a <code>NewBalance</code> property.</li>
+                        <li>Create a <code>BankAccount</code> class with a <code>Balance</code> and an event <code>EventHandler&lt;DepositEventArgs&gt; Deposited</code>. In a <code>Deposit(decimal amount)</code> method, increase the balance and raise the event.</li>
+                        <li>Subscribe two handlers: one prints a receipt, another prints a "bonus points earned" message. Then make a deposit.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">BankAccount account = new BankAccount();
+
+// TODO: subscribe two handlers to account.Deposited
+
+account.Deposit(100m);
+
+class DepositEventArgs : EventArgs
+{
+    public decimal Amount { get; }
+    public decimal NewBalance { get; }
+    public DepositEventArgs(decimal amount, decimal newBalance)
+    {
+        Amount = amount;
+        NewBalance = newBalance;
+    }
+}
+
+class BankAccount
+{
+    public decimal Balance { get; private set; }
+    public event EventHandler&lt;DepositEventArgs&gt; Deposited;
+
+    public void Deposit(decimal amount)
+    {
+        // TODO: add to Balance, then raise Deposited with a DepositEventArgs
+    }
+}</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>In <code>Deposit</code>: <code>Balance += amount;</code> then <code>Deposited?.Invoke(this, new DepositEventArgs(amount, Balance));</code>. Subscribe with <code>account.Deposited += (sender, e) =&gt; ...</code> and read <code>e.Amount</code> / <code>e.NewBalance</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">BankAccount account = new BankAccount();
+
+account.Deposited += (sender, e) =&gt;
+    Console.WriteLine($"Receipt: deposited {e.Amount:C}. Balance: {e.NewBalance:C}");
+
+account.Deposited += (sender, e) =&gt;
+    Console.WriteLine($"You earned {(int)(e.Amount)} bonus points!");
+
+account.Deposit(100m);
+
+class DepositEventArgs : EventArgs
+{
+    public decimal Amount { get; }
+    public decimal NewBalance { get; }
+    public DepositEventArgs(decimal amount, decimal newBalance)
+    {
+        Amount = amount;
+        NewBalance = newBalance;
+    }
+}
+
+class BankAccount
+{
+    public decimal Balance { get; private set; }
+    public event EventHandler&lt;DepositEventArgs&gt; Deposited;
+
+    public void Deposit(decimal amount)
+    {
+        Balance += amount;
+        Deposited?.Invoke(this, new DepositEventArgs(amount, Balance));
+    }
+}</code></pre>
+                        <p>Output:</p>
+                        <pre><code>Receipt: deposited $100.00. Balance: $100.00
+You earned 100 bonus points!</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> In the publisher/subscriber pattern, who raises the event?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! The publisher raises (invokes) the event; subscribers only react.">
+                                A) The publisher (the object the event belongs to).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Subscribers react to the event; they don't raise it.">
+                                B) Any subscriber.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Events are raised by code, specifically the publisher.">
+                                C) The .NET runtime, automatically.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Why raise an event with <code>Rang?.Invoke(...)</code> instead of <code>Rang.Invoke(...)</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! With no subscribers the event is null; ?. avoids a NullReferenceException.">
+                                A) If there are no subscribers the event is <code>null</code>, and <code>?.</code> avoids a crash.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's not about speed.">
+                                B) It makes the event run faster.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Both forms call every subscriber; the difference is null safety.">
+                                C) It calls only the first subscriber.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What can outside code do with an <code>event</code> that it can't do with a plain public delegate?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It's the reverse — events restrict outside code, they don't grant more power.">
+                                A) Outside code can raise an event but not a delegate.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! An event only lets outsiders subscribe/unsubscribe; only the declaring class can raise it or clear subscribers.">
+                                B) With an event, outsiders can only subscribe/unsubscribe — not raise or overwrite it.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Events don't remove the ability to have multiple subscribers.">
+                                C) An event allows only one subscriber.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>An <strong>event</strong> implements publisher/subscriber: a publisher raises it, and any number of subscribers react — built on delegates.</li>
+                        <li>Subscribe with <code>+=</code>, unsubscribe with <code>-=</code> (keep a reference to what you subscribed so you can remove it).</li>
+                        <li>Always raise with <code>EventName?.Invoke(...)</code> to safely handle the no-subscribers (<code>null</code>) case.</li>
+                        <li>Follow the standard pattern: <code>EventHandler</code> / <code>EventHandler&lt;T&gt;</code> with <code>(object sender, EventArgs e)</code>; pass data via a custom <code>EventArgs</code>.</li>
+                        <li>An <code>event</code> encapsulates its delegate — outsiders may subscribe/unsubscribe, but only the class can raise or clear it.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/programming-guide/events/" target="_blank" rel="noopener">Events — C# Programming Guide</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/events/" target="_blank" rel="noopener">Handling and raising events — .NET</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.eventhandler-1" target="_blank" rel="noopener">EventHandler&lt;TEventArgs&gt; — API reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You've now used delegates directly and through events. In <strong>Lesson 2.3: LINQ</strong>, you'll see delegates and lambdas at their most powerful — querying and transforming collections with beautifully concise code.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Events mastered!</h3>
+                    <p>Your objects can now broadcast and react to change. Next, the crown jewel of functional-style C#: LINQ.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_04.html" class="prev-lesson">← Previous: Lesson 2.1 — Delegates and Lambdas</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_06.html" class="next-lesson">Next: Lesson 2.3 — LINQ →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

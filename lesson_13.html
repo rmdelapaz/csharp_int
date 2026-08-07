@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fetch live data over the internet in C# with HttpClient: async GET requests, JSON deserialization, status codes, and error handling.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 5.1: Calling Web APIs with HttpClient - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 5: Real-World C# and Quality</a></li>
+            <li aria-current="page">Lesson 5.1: Calling Web APIs with HttpClient</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 5.1: Calling Web APIs with HttpClient</h1>
+                <p class="lead">This is where it all comes together. You'll fetch live data from the internet with <code>HttpClient</code> — using the async you learned in 4.3 and the JSON from 4.2 — to turn a web response into real C# objects.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what a web API and an HTTP request are</li>
+                        <li>Send async GET requests with <code>HttpClient</code></li>
+                        <li>Deserialize a JSON response straight into objects with <code>GetFromJsonAsync</code></li>
+                        <li>Check status codes and handle network errors</li>
+                        <li>Reuse a single <code>HttpClient</code> correctly</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 75 minutes</p>
+                    <p><strong>Project:</strong> Fetch and display data from a public web API.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is a Web API?</a></li>
+                        <li><a href="#first-request" class="toc-link">Your First Request</a></li>
+                        <li><a href="#json" class="toc-link">JSON Straight into Objects</a></li>
+                        <li><a href="#status" class="toc-link">Status Codes &amp; Errors</a></li>
+                        <li><a href="#reuse" class="toc-link">Reusing HttpClient</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is a web API -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is a Web API?</h2>
+                <p>A <strong>web API</strong> is a service on the internet that programs (not people) can call to get or send data. Your code sends an <strong>HTTP request</strong> to a URL; the server sends back an <strong>HTTP response</strong>, very often as JSON.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definitions</h4>
+                    <p><strong>HTTP:</strong> the protocol browsers and apps use to talk to servers. A request has a <em>method</em> — <code>GET</code> (fetch data), <code>POST</code> (send data), and others.</p>
+                    <p><strong>Web API / REST:</strong> a server exposing data at URLs (called <em>endpoints</em>), usually exchanging JSON.</p>
+                </div>
+
+                <div class="mermaid">
+                    graph LR
+                    A["Your C# app<br/>HttpClient"] -->|"GET request (URL)"| B["Web server<br/>(the API)"]
+                    B -->|"HTTP response (JSON)"| A
+                    A --> C["Deserialize JSON<br/>into objects"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style C fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <p>In .NET, the class for making these calls is <code>HttpClient</code> (in <code>System.Net.Http</code>). Every method is asynchronous — network calls are exactly the slow, waiting work that <code>async</code>/<code>await</code> was made for.</p>
+            </section>
+
+            <!-- Section 2: First request -->
+            <section id="first-request" class="lesson-section">
+                <h2>Your First Request</h2>
+                <p>The simplest call fetches a URL's content as a string. Since it's async, we <code>await</code> it (Lesson 4.3):</p>
+
+                <pre><code class="language-csharp">using System.Net.Http;
+
+HttpClient client = new HttpClient();
+
+string json = await client.GetStringAsync("https://api.example.com/products");
+Console.WriteLine(json);   // the raw JSON text the server returned</code></pre>
+
+                <p>That gives you the response body as text. You <em>could</em> then hand it to <code>JsonSerializer.Deserialize</code> from Lesson 4.2 — but there's a shortcut that does both steps at once, coming next.</p>
+
+                <div class="card card-info">
+                    <h4>💡 A public API to practice with</h4>
+                    <p>Free "fake" APIs like <code>https://jsonplaceholder.typicode.com</code> return sample JSON for learning — for example <code>/todos/1</code> returns a single to-do item. We'll use it in the exercise so you can run real requests safely.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: JSON into objects -->
+            <section id="json" class="lesson-section">
+                <h2>JSON Straight into Objects</h2>
+                <p>The method <code>GetFromJsonAsync&lt;T&gt;</code> (from <code>System.Net.Http.Json</code>) fetches a URL <em>and</em> deserializes the JSON response into your type in one call — combining Lessons 4.2 and 4.3 beautifully:</p>
+
+                <pre><code class="language-csharp">using System.Net.Http.Json;
+
+record Todo(int Id, int UserId, string Title, bool Completed);
+
+HttpClient client = new HttpClient();
+
+Todo? todo = await client.GetFromJsonAsync&lt;Todo&gt;(
+    "https://jsonplaceholder.typicode.com/todos/1");
+
+Console.WriteLine($"{todo?.Id}: {todo?.Title} (done: {todo?.Completed})");</code></pre>
+
+                <p>Fetching a whole list is just as easy — deserialize into a <code>List&lt;T&gt;</code>:</p>
+                <pre><code class="language-csharp">List&lt;Todo&gt;? todos = await client.GetFromJsonAsync&lt;List&lt;Todo&gt;&gt;(
+    "https://jsonplaceholder.typicode.com/todos");
+
+Console.WriteLine($"Fetched {todos?.Count} todos.");
+
+// Now use LINQ (Lesson 2.3) on live data!
+var completed = todos?.Where(t =&gt; t.Completed).Count();
+Console.WriteLine($"{completed} are completed.");</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Everything you've learned, working together</h4>
+                    <p>Look at that last example: an <strong>async</strong> network call (4.3) returns <strong>JSON</strong> deserialized (4.2) into <strong>records</strong> (3.1) in a <strong>generic</strong> <code>List&lt;T&gt;</code> (1.2), which you then query with <strong>LINQ</strong> (2.3). This is real, modern C#.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Property name matching</h4>
+                    <p>The JSON here uses camelCase (<code>userId</code>), and your record uses PascalCase (<code>UserId</code>). <code>System.Text.Json</code> matches names case-insensitively by default, so it just works — but this is why the naming options from Lesson 4.2 matter when APIs are involved.</p>
+                </div>
+            </section>
+
+            <!-- Section 4: Status codes and errors -->
+            <section id="status" class="lesson-section">
+                <h2>Status Codes &amp; Errors</h2>
+                <p>Every HTTP response carries a <strong>status code</strong> that says how it went. You'll want to recognize the common ranges:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Range</th><th>Meaning</th><th>Examples</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>2xx</strong></td><td>Success</td><td>200 OK, 201 Created</td></tr>
+                            <tr><td><strong>4xx</strong></td><td>Client error (your request was wrong)</td><td>404 Not Found, 401 Unauthorized</td></tr>
+                            <tr><td><strong>5xx</strong></td><td>Server error</td><td>500 Internal Server Error</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>For finer control, use <code>GetAsync</code>, which returns a response object you can inspect before reading the body:</p>
+                <pre><code class="language-csharp">HttpResponseMessage response = await client.GetAsync(url);
+
+if (response.IsSuccessStatusCode)   // true for any 2xx
+{
+    string body = await response.Content.ReadAsStringAsync();
+    Console.WriteLine(body);
+}
+else
+{
+    Console.WriteLine($"Request failed: {(int)response.StatusCode} {response.StatusCode}");
+}</code></pre>
+
+                <p>Two kinds of things can go wrong, and robust code handles both (using Lesson 1.1's exception skills):</p>
+                <pre><code class="language-csharp">try
+{
+    Todo? todo = await client.GetFromJsonAsync&lt;Todo&gt;(url);
+    Console.WriteLine(todo?.Title);
+}
+catch (HttpRequestException ex)     // network failure, DNS, non-success status
+{
+    Console.WriteLine($"Network error: {ex.Message}");
+}
+catch (TaskCanceledException)       // timeout
+{
+    Console.WriteLine("The request timed out.");
+}</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ The network is never guaranteed</h4>
+                    <p>Unlike local method calls, a web request can fail for reasons outside your control — no connection, a down server, a timeout. <strong>Always</strong> wrap API calls in <code>try</code>/<code>catch (HttpRequestException)</code>. (Note: <code>GetFromJsonAsync</code> and <code>EnsureSuccessStatusCode()</code> throw <code>HttpRequestException</code> automatically on non-success codes.)</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Reusing HttpClient -->
+            <section id="reuse" class="lesson-section">
+                <h2>Reusing <code>HttpClient</code></h2>
+                <p>Here's a crucial real-world detail. Although <code>HttpClient</code> is <code>IDisposable</code>, you should <strong>not</strong> create a new one for every request. Doing so in a loop can exhaust the operating system's network connections (a well-known bug called <em>socket exhaustion</em>).</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Don't do this</h4>
+                    <pre><code class="language-csharp">// ❌ A new client per request — can exhaust sockets
+foreach (var url in urls)
+{
+    using var client = new HttpClient();   // BAD in a loop
+    var data = await client.GetStringAsync(url);
+}</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Do this instead</h4>
+                    <p>Create <strong>one</strong> <code>HttpClient</code> and reuse it for many requests. It's designed to be shared and is safe for concurrent use:</p>
+                    <pre><code class="language-csharp">// ✅ One shared client, reused
+HttpClient client = new HttpClient();
+
+foreach (var url in urls)
+{
+    var data = await client.GetStringAsync(url);
+}</code></pre>
+                    <p>In larger apps, the recommended approach is <code>IHttpClientFactory</code> (used with dependency injection), which manages client lifetimes for you. For our console programs, a single shared instance is exactly right.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Setting a base address and headers</h4>
+                    <p>You can configure a client once and reuse it — a base URL, a default timeout, headers like an API key:</p>
+                    <pre><code class="language-csharp">HttpClient client = new HttpClient
+{
+    BaseAddress = new Uri("https://jsonplaceholder.typicode.com/"),
+    Timeout = TimeSpan.FromSeconds(10)
+};
+
+// Then use relative paths:
+var todo = await client.GetFromJsonAsync&lt;Todo&gt;("todos/1");</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 6: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Live To-Do Fetcher</h3>
+                    <p><strong>Objective:</strong> Fetch real JSON data from a public API and process it with LINQ.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>ApiClient</code>.</li>
+                        <li>Define <code>record Todo(int Id, int UserId, string Title, bool Completed);</code>.</li>
+                        <li>Create one shared <code>HttpClient</code>.</li>
+                        <li>Use <code>GetFromJsonAsync&lt;List&lt;Todo&gt;&gt;</code> to fetch <code>https://jsonplaceholder.typicode.com/todos</code>.</li>
+                        <li>Print how many todos there are, and — using LINQ — how many are completed and the title of the first incomplete one.</li>
+                        <li>Wrap everything in <code>try</code>/<code>catch (HttpRequestException)</code>.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">using System.Net.Http.Json;
+
+record Todo(int Id, int UserId, string Title, bool Completed);
+
+HttpClient client = new HttpClient();
+
+// TODO: try/catch; fetch List&lt;Todo&gt;; print count, completed count, first incomplete title</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>var todos = await client.GetFromJsonAsync&lt;List&lt;Todo&gt;&gt;("https://jsonplaceholder.typicode.com/todos");</code>. Then <code>todos.Count(t =&gt; t.Completed)</code> and <code>todos.First(t =&gt; !t.Completed).Title</code> (or <code>FirstOrDefault</code> to be safe).</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">using System.Net.Http.Json;
+
+record Todo(int Id, int UserId, string Title, bool Completed);
+
+HttpClient client = new HttpClient();
+string url = "https://jsonplaceholder.typicode.com/todos";
+
+try
+{
+    List&lt;Todo&gt;? todos = await client.GetFromJsonAsync&lt;List&lt;Todo&gt;&gt;(url);
+
+    if (todos is null || todos.Count == 0)
+    {
+        Console.WriteLine("No todos returned.");
+        return;
+    }
+
+    Console.WriteLine($"Total todos: {todos.Count}");
+    Console.WriteLine($"Completed: {todos.Count(t =&gt; t.Completed)}");
+
+    Todo? firstOpen = todos.FirstOrDefault(t =&gt; !t.Completed);
+    Console.WriteLine($"First incomplete: {firstOpen?.Title ?? "(none)"}");
+}
+catch (HttpRequestException ex)
+{
+    Console.WriteLine($"Could not reach the API: {ex.Message}");
+}</code></pre>
+                        <p>Sample output:</p>
+                        <pre><code>Total todos: 200
+Completed: 90
+First incomplete: delectus aut autem</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does <code>GetFromJsonAsync&lt;T&gt;</code> do in one call?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! It sends the request and deserializes the JSON response into a T.">
+                                A) Fetches a URL and deserializes the JSON response into a <code>T</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It reads from the network, not from a local file.">
+                                B) Reads a local JSON file into a <code>T</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's a GET (fetch), not a save.">
+                                C) Uploads a <code>T</code> to the server as JSON.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> An HTTP status code in the <strong>4xx</strong> range means…</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="2xx means success.">
+                                A) The request succeeded.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! 4xx indicates a client error, like 404 Not Found.">
+                                B) A client error — something was wrong with the request (e.g. 404).
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Server errors are 5xx.">
+                                C) The server crashed.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> Why reuse a single <code>HttpClient</code> instead of creating one per request?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Creating many clients can exhaust network sockets; one shared client avoids that.">
+                                A) Creating many can exhaust network sockets; one shared client is safe and efficient.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's not about JSON formatting.">
+                                B) A single client formats JSON better.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="You still await requests; reuse is about resource use, not avoiding await.">
+                                C) So you don't have to use <code>await</code>.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>web API</strong> serves data over HTTP at URLs (endpoints), usually as JSON; call it with <code>HttpClient</code> (all methods are async).</li>
+                        <li><code>GetStringAsync</code> returns raw text; <code>GetFromJsonAsync&lt;T&gt;</code> fetches <em>and</em> deserializes into your type in one step.</li>
+                        <li>Check <strong>status codes</strong> (2xx success, 4xx client error, 5xx server error); use <code>GetAsync</code> + <code>IsSuccessStatusCode</code> for control.</li>
+                        <li>Always handle failures with <code>try</code>/<code>catch (HttpRequestException)</code> — the network can always fail.</li>
+                        <li><strong>Reuse</strong> a single <code>HttpClient</code> (don't create one per request) to avoid socket exhaustion.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/fundamentals/networking/http/httpclient" target="_blank" rel="noopener">Make HTTP requests with HttpClient — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/deserialization" target="_blank" rel="noopener">Deserialize JSON (incl. from HttpClient)</a></li>
+                    <li><a href="https://jsonplaceholder.typicode.com/" target="_blank" rel="noopener">JSONPlaceholder — free fake API for testing</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>Your code now talks to the wider world. Before the capstone, we'll make sure it stays correct as it grows. In <strong>Lesson 5.2: Unit Testing</strong>, you'll write automated tests that prove your code works — and keep it working.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 You're online!</h3>
+                    <p>Your programs can fetch live data from anywhere on the internet. Next: proving your code is correct with tests.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_12.html" class="prev-lesson">← Previous: Lesson 4.3 — Asynchronous Programming</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_14.html" class="next-lesson">Next: Lesson 5.2 — Unit Testing →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

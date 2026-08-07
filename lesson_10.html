@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Read and write files in C# with the File and Path classes, streams, and the using statement for safe cleanup.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 4.1: Working with Files and Streams - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 4: Data and I/O</a></li>
+            <li aria-current="page">Lesson 4.1: Working with Files and Streams</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 4.1: Working with Files and Streams</h1>
+                <p class="lead">Until now, everything your programs produced vanished when they closed. Files change that. In this lesson you'll read and write files so your data <em>persists</em> — and learn to clean up resources properly.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Read and write whole files with the <code>File</code> helper methods</li>
+                        <li>Build safe file paths with the <code>Path</code> class</li>
+                        <li>Check for existence and handle file-related exceptions</li>
+                        <li>Use <code>StreamReader</code>/<code>StreamWriter</code> for larger files</li>
+                        <li>Use the <code>using</code> statement to release resources automatically</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Build a tiny notes app that saves to and loads from a file.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">Why Files?</a></li>
+                        <li><a href="#file-class" class="toc-link">The File Class</a></li>
+                        <li><a href="#paths" class="toc-link">Building Paths Safely</a></li>
+                        <li><a href="#existence" class="toc-link">Existence &amp; Exceptions</a></li>
+                        <li><a href="#streams" class="toc-link">Streams and <code>using</code></a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: Why files -->
+            <section id="introduction" class="lesson-section">
+                <h2>Why Files?</h2>
+                <p>Data stored in variables lives only in memory — when the program ends, it's gone. To <strong>persist</strong> data between runs, you write it somewhere durable. The simplest option is a <strong>file</strong> on disk.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>File I/O</strong> (input/output): reading data <em>from</em> and writing data <em>to</em> files. .NET's file APIs live in the <code>System.IO</code> namespace.</p>
+                </div>
+
+                <p>.NET gives you two levels of tools, and you'll use both:</p>
+                <ul>
+                    <li>The <code>File</code> class — simple one-call methods for reading/writing an entire file. Perfect for small files.</li>
+                    <li><strong>Streams</strong> (<code>StreamReader</code>/<code>StreamWriter</code>) — read or write a little at a time, ideal for large files.</li>
+                </ul>
+            </section>
+
+            <!-- Section 2: File class -->
+            <section id="file-class" class="lesson-section">
+                <h2>The <code>File</code> Class</h2>
+                <p>The <code>File</code> class has convenient static methods that handle the whole read or write in one call:</p>
+
+                <pre><code class="language-csharp">using System.IO;   // (modern templates often include this implicitly)
+
+// Write a whole string to a file (creates or overwrites)
+File.WriteAllText("greeting.txt", "Hello, file!");
+
+// Read it all back
+string content = File.ReadAllText("greeting.txt");
+Console.WriteLine(content);            // Hello, file!
+
+// Append without overwriting
+File.AppendAllText("greeting.txt", "\nA second line.");</code></pre>
+
+                <p>For line-based data, use the array-oriented versions — they pair naturally with collections and LINQ:</p>
+                <pre><code class="language-csharp">string[] lines = { "Ada", "Grace", "Alan" };
+File.WriteAllLines("names.txt", lines);
+
+string[] readBack = File.ReadAllLines("names.txt");
+Console.WriteLine($"{readBack.Length} names");   // 3 names
+foreach (string name in readBack)
+{
+    Console.WriteLine(name);
+}</code></pre>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Method</th><th>Does</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>File.WriteAllText(path, text)</code></td><td>Write a string (overwrites)</td></tr>
+                            <tr><td><code>File.ReadAllText(path)</code></td><td>Read the whole file as one string</td></tr>
+                            <tr><td><code>File.AppendAllText(path, text)</code></td><td>Add to the end</td></tr>
+                            <tr><td><code>File.WriteAllLines(path, lines)</code></td><td>Write a collection of lines</td></tr>
+                            <tr><td><code>File.ReadAllLines(path)</code></td><td>Read into a <code>string[]</code></td></tr>
+                            <tr><td><code>File.Exists(path)</code></td><td>Returns <code>true</code> if the file exists</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Write overwrites without asking</h4>
+                    <p><code>WriteAllText</code> and <code>WriteAllLines</code> replace the file's entire contents if it already exists — no confirmation. Use <code>AppendAllText</code> when you mean to add rather than replace.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: Paths -->
+            <section id="paths" class="lesson-section">
+                <h2>Building Paths Safely</h2>
+                <p>File paths differ across operating systems (Windows uses <code>\</code>, macOS/Linux use <code>/</code>). Never hand-build paths with string concatenation — use the <code>Path</code> class, which does it correctly everywhere:</p>
+
+                <pre><code class="language-csharp">// ❌ Fragile — wrong separator on some systems
+string bad = "data" + "\\" + "notes.txt";
+
+// ✅ Correct on every OS
+string good = Path.Combine("data", "notes.txt");
+
+Console.WriteLine(Path.GetFileName(good));        // notes.txt
+Console.WriteLine(Path.GetExtension(good));       // .txt
+Console.WriteLine(Path.GetFileNameWithoutExtension(good));   // notes</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Special folders</h4>
+                    <p>To find standard locations (like the user's documents folder) portably, combine <code>Environment.GetFolderPath</code> with <code>Path.Combine</code>:</p>
+                    <pre><code class="language-csharp">string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+string filePath = Path.Combine(docs, "notes.txt");</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 4: Existence and exceptions -->
+            <section id="existence" class="lesson-section">
+                <h2>Existence &amp; Exceptions</h2>
+                <p>Reading a file that doesn't exist throws a <code>FileNotFoundException</code> (from Lesson 1.1). Guard against it — either check first, or wrap the read in <code>try</code>/<code>catch</code>:</p>
+
+                <pre><code class="language-csharp">string path = "notes.txt";
+
+// Option 1: check before reading
+if (File.Exists(path))
+{
+    string text = File.ReadAllText(path);
+    Console.WriteLine(text);
+}
+else
+{
+    Console.WriteLine("No notes file yet.");
+}
+
+// Option 2: handle the exception
+try
+{
+    string text = File.ReadAllText(path);
+    Console.WriteLine(text);
+}
+catch (FileNotFoundException)
+{
+    Console.WriteLine("File not found.");
+}
+catch (IOException ex)
+{
+    Console.WriteLine($"A file error occurred: {ex.Message}");
+}</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Both — belt and braces</h4>
+                    <p>Checking with <code>File.Exists</code> handles the common "not there yet" case cleanly. But files can vanish or lock between the check and the read, and other I/O problems (permissions, disk full) still happen — so wrapping file work in <code>try</code>/<code>catch (IOException)</code> is good practice for anything important.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Streams and using -->
+            <section id="streams" class="lesson-section">
+                <h2>Streams and <code>using</code></h2>
+                <p>The <code>File.ReadAllText</code> helpers load the <em>entire</em> file into memory at once — fine for small files, wasteful (or impossible) for huge ones. A <strong>stream</strong> reads or writes a bit at a time, so memory use stays low regardless of file size.</p>
+
+                <pre><code class="language-csharp">// Read a large file line by line with a StreamReader
+using (StreamReader reader = new StreamReader("big-log.txt"))
+{
+    string? line;
+    while ((line = reader.ReadLine()) != null)   // null means end of file
+    {
+        Console.WriteLine(line);
+    }
+}   // reader is automatically closed and disposed here</code></pre>
+
+                <p>Notice the <code>using</code> statement. A <code>StreamReader</code> holds an operating-system file handle that <em>must</em> be released. <code>using</code> guarantees that happens — even if an exception is thrown inside the block:</p>
+
+                <div class="card card-info">
+                    <h4>💡 <code>using</code> and <code>IDisposable</code></h4>
+                    <p>Any type that implements <code>IDisposable</code> (the interface from the intro course) can be wrapped in <code>using</code>. When the block ends — normally or via an exception — its <code>Dispose()</code> runs automatically, releasing the resource. This is the clean alternative to a manual <code>finally</code> we mentioned back in Lesson 1.1.</p>
+                </div>
+
+                <p>Modern C# also offers a tidier <strong>using declaration</strong> — no braces; the resource is disposed at the end of the enclosing scope:</p>
+                <pre><code class="language-csharp">void WriteReport()
+{
+    using StreamWriter writer = new StreamWriter("report.txt");
+    writer.WriteLine("Line 1");
+    writer.WriteLine("Line 2");
+}   // writer disposed here, at the end of the method</code></pre>
+
+                <div class="mermaid">
+                    graph LR
+                    A["using (open resource)"] --> B["Use the stream"]
+                    B --> C{"Exception?"}
+                    C -->|"No"| D["Dispose automatically"]
+                    C -->|"Yes"| D
+                    D --> E["Resource released"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style E fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Always dispose file resources</h4>
+                    <p>If you open a stream and forget to close/dispose it, the file may stay locked, changes may not be flushed to disk, and you can run out of handles. Always use <code>using</code> with streams — never rely on it "probably being fine."</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Persistent Notes App</h3>
+                    <p><strong>Objective:</strong> Save and load data across program runs using files.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>Notes</code>.</li>
+                        <li>Build the file path with <code>Path.Combine</code> (e.g. <code>notes.txt</code> in the current folder).</li>
+                        <li>On startup, if the file exists, read and print all existing notes; otherwise print "No notes yet."</li>
+                        <li>Prompt the user for a new note and <strong>append</strong> it (with a newline) so old notes are preserved.</li>
+                        <li>Wrap file operations in <code>try</code>/<code>catch (IOException)</code>.</li>
+                        <li><strong>Bonus:</strong> Run the program a few times and confirm notes accumulate.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">string path = Path.Combine(".", "notes.txt");
+
+// TODO: if the file exists, read and print existing notes
+
+Console.Write("Enter a new note: ");
+string note = Console.ReadLine() ?? "";
+
+// TODO: append the note (+ newline) to the file, inside try/catch</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Use <code>File.Exists(path)</code> then <code>File.ReadAllText(path)</code>. Append with <code>File.AppendAllText(path, note + Environment.NewLine);</code>. <code>Environment.NewLine</code> is the correct newline for the OS.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">string path = Path.Combine(".", "notes.txt");
+
+try
+{
+    if (File.Exists(path))
+    {
+        Console.WriteLine("Your notes so far:");
+        Console.WriteLine(File.ReadAllText(path));
+    }
+    else
+    {
+        Console.WriteLine("No notes yet.");
+    }
+
+    Console.Write("Enter a new note: ");
+    string note = Console.ReadLine() ?? "";
+
+    File.AppendAllText(path, note + Environment.NewLine);
+    Console.WriteLine("Note saved!");
+}
+catch (IOException ex)
+{
+    Console.WriteLine($"Could not access the notes file: {ex.Message}");
+}</code></pre>
+                        <p>After running twice (entering "Buy milk", then "Walk dog"), the third run prints:</p>
+                        <pre><code>Your notes so far:
+Buy milk
+Walk dog
+
+Enter a new note: _</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does <code>File.WriteAllText</code> do if the file already exists?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't append — that's AppendAllText.">
+                                A) Adds the text to the end.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! WriteAllText overwrites the entire file contents.">
+                                B) Overwrites the entire file with the new text.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It won't throw just because the file exists.">
+                                C) Throws an exception because the file exists.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Why use <code>Path.Combine</code> instead of concatenating path strings yourself?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Path.Combine uses the correct separator for the OS, so paths work everywhere.">
+                                A) It uses the correct path separator for the operating system.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's about correctness across OSes, not speed.">
+                                B) It makes file reads faster.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It builds paths; it doesn't create the file.">
+                                C) It automatically creates the file.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does a <code>using</code> statement guarantee for a <code>StreamReader</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't prevent exceptions; it ensures cleanup regardless.">
+                                A) That no exception can occur while reading.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! using calls Dispose() at the end of the block — even if an exception is thrown — releasing the file.">
+                                B) That the reader is disposed (file released) when the block ends, even on error.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="using is about disposal, not reading speed.">
+                                C) That the file is read twice as fast.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 7: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>Files let data <strong>persist</strong> between runs; file APIs live in <code>System.IO</code>.</li>
+                        <li>The <code>File</code> class reads/writes whole files in one call: <code>ReadAllText</code>, <code>WriteAllText</code> (overwrites!), <code>AppendAllText</code>, <code>ReadAllLines</code>, <code>WriteAllLines</code>, <code>Exists</code>.</li>
+                        <li>Build paths with <code>Path.Combine</code> and inspect them with <code>Path.GetFileName</code>/<code>GetExtension</code> — never hand-concatenate.</li>
+                        <li>Reading a missing file throws <code>FileNotFoundException</code>; guard with <code>File.Exists</code> and/or <code>try</code>/<code>catch (IOException)</code>.</li>
+                        <li>Use <strong>streams</strong> for large files, and always wrap them in <code>using</code> so they're disposed (released) automatically.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/api/system.io.file" target="_blank" rel="noopener">File class — API reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/io/" target="_blank" rel="noopener">File and stream I/O — .NET</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/statements/using" target="_blank" rel="noopener">The <code>using</code> statement — reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You can save and load text — but real apps store <em>structured</em> data. In <strong>Lesson 4.2: JSON Serialization</strong>, you'll convert your objects (records and classes) to and from JSON, so you can save and reload them whole.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Your data now persists!</h3>
+                    <p>Programs that remember across runs feel real. Next: saving structured objects with JSON.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_09.html" class="prev-lesson">← Previous: Lesson 3.3 — Nullable Reference Types</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_11.html" class="next-lesson">Next: Lesson 4.2 — JSON Serialization →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

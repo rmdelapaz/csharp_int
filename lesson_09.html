@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Avoid null crashes in C# with nullable reference types, null-conditional (?.), null-coalescing (??), and the compiler's null analysis.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 3.3: Nullable Reference Types - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 3: Modern Language Features</a></li>
+            <li aria-current="page">Lesson 3.3: Nullable Reference Types</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 3.3: Nullable Reference Types</h1>
+                <p class="lead">The <code>NullReferenceException</code> is one of the most common runtime crashes in all of programming. Nullable reference types let the C# compiler warn you about potential null problems <em>before</em> your program ever runs.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain the null problem and why it causes crashes</li>
+                        <li>Distinguish nullable (<code>string?</code>) from non-nullable (<code>string</code>) references</li>
+                        <li>Respond to the compiler's nullability warnings</li>
+                        <li>Use <code>?.</code>, <code>??</code>, and <code>??=</code> to handle null safely and concisely</li>
+                        <li>Use the null-forgiving <code>!</code> operator responsibly</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Make code null-safe and satisfy the compiler's null analysis.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">The Null Problem</a></li>
+                        <li><a href="#nullable-value" class="toc-link">Nullable Value Types (Recap)</a></li>
+                        <li><a href="#nrt" class="toc-link">Nullable Reference Types</a></li>
+                        <li><a href="#operators" class="toc-link">Null-Safe Operators</a></li>
+                        <li><a href="#forgiving" class="toc-link">The Null-Forgiving Operator</a></li>
+                        <li><a href="#practices" class="toc-link">Practical Patterns</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: The null problem -->
+            <section id="introduction" class="lesson-section">
+                <h2>The Null Problem</h2>
+                <p><code>null</code> means "no value — this reference points to nothing." Trying to <em>use</em> a null reference (call a method, read a property) throws a <code>NullReferenceException</code> and crashes your program. You met this exception in Lesson 1.1.</p>
+
+                <pre><code class="language-csharp">string name = null;
+Console.WriteLine(name.Length);   // 💥 NullReferenceException at runtime</code></pre>
+
+                <div class="card card-accent">
+                    <h4>📖 The "billion-dollar mistake"</h4>
+                    <p>The inventor of the null reference, Tony Hoare, later called it his "billion-dollar mistake" for all the crashes it has caused. C#'s <strong>nullable reference types</strong> feature is designed to catch these problems at compile time instead of runtime.</p>
+                </div>
+
+                <p>The core idea: let you <em>declare your intent</em> — "this can be null" or "this must never be null" — and have the compiler check that you honor it.</p>
+            </section>
+
+            <!-- Section 2: Nullable value types recap -->
+            <section id="nullable-value" class="lesson-section">
+                <h2>Nullable Value Types (Recap)</h2>
+                <p>Value types like <code>int</code> and <code>bool</code> normally can't be null. But sometimes you need "an int, or no value at all" — say, an optional age. Add <code>?</code> to make a <strong>nullable value type</strong>:</p>
+
+                <pre><code class="language-csharp">int? maybeAge = null;      // an int that can also be null
+maybeAge = 30;
+
+if (maybeAge.HasValue)
+{
+    Console.WriteLine(maybeAge.Value);   // 30
+}
+
+int definiteAge = maybeAge ?? 0;   // use 0 if null (?? explained below)</code></pre>
+
+                <p>This is the generic <code>Nullable&lt;T&gt;</code> from Lesson 1.2, with <code>?</code> as convenient shorthand. Nullable <em>reference</em> types use the same <code>?</code> symbol — but they work a little differently, as we'll see.</p>
+            </section>
+
+            <!-- Section 3: NRT -->
+            <section id="nrt" class="lesson-section">
+                <h2>Nullable Reference Types</h2>
+                <p>Reference types (like <code>string</code> and your own classes) have <em>always</em> been able to hold null. The <strong>nullable reference types</strong> feature doesn't change that at runtime — instead, it adds compile-time <em>analysis</em>. In a nullable-aware project, you declare which references are allowed to be null:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Declaration</th><th>Meaning</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>string name</code></td><td><strong>Non-nullable</strong>: should never be null. The compiler warns if it might be.</td></tr>
+                            <tr><td><code>string? name</code></td><td><strong>Nullable</strong>: may be null. The compiler makes you check before using it.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <pre><code class="language-csharp">string name = "Ada";      // non-nullable
+string? nickname = null;   // nullable — this is fine
+
+Console.WriteLine(name.Length);       // OK — compiler knows it's not null
+Console.WriteLine(nickname.Length);   // ⚠️ Warning — nickname might be null!</code></pre>
+
+                <p>The compiler traces your code. Once you've <em>checked</em> for null, the warning goes away inside that block — it understands the guard:</p>
+                <pre><code class="language-csharp">if (nickname != null)
+{
+    Console.WriteLine(nickname.Length);   // OK here — you proved it's not null
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Enabling nullable analysis</h4>
+                    <p>Modern project templates enable this by default via <code>&lt;Nullable&gt;enable&lt;/Nullable&gt;</code> in the <code>.csproj</code> (or <code>#nullable enable</code> at the top of a file). When it's on, the <code>?</code> annotations become meaningful and the compiler starts guiding you. These are <strong>warnings</strong>, not errors — but treat them seriously; each one is a potential crash.</p>
+                </div>
+
+                <div class="mermaid">
+                    graph TD
+                    A["A reference variable"] --> B{"Declared with ?"}
+                    B -->|"string (no ?)"| C["Compiler assumes<br/>never null"]
+                    B -->|"string? (with ?)"| D["Compiler requires<br/>a null check before use"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style C fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style D fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 4: Null-safe operators -->
+            <section id="operators" class="lesson-section">
+                <h2>Null-Safe Operators</h2>
+                <p>C# has three concise operators that make working with possibly-null values painless.</p>
+
+                <h3>Null-conditional <code>?.</code></h3>
+                <p>The <code>?.</code> operator (you saw it raising events in Lesson 2.2) accesses a member <em>only if</em> the left side isn't null; otherwise the whole expression is null — no crash:</p>
+                <pre><code class="language-csharp">string? name = null;
+
+int? length = name?.Length;      // null (not a crash) because name is null
+Console.WriteLine(length);       // (prints nothing / empty)
+
+name = "Ada";
+Console.WriteLine(name?.Length); // 3</code></pre>
+
+                <h3>Null-coalescing <code>??</code></h3>
+                <p>The <code>??</code> operator supplies a fallback value when the left side is null:</p>
+                <pre><code class="language-csharp">string? input = null;
+string display = input ?? "(no name)";   // use the fallback if input is null
+Console.WriteLine(display);              // (no name)
+
+// Combine ?. and ?? for a safe default:
+int length = name?.Length ?? 0;          // 0 if name is null</code></pre>
+
+                <h3>Null-coalescing assignment <code>??=</code></h3>
+                <p>The <code>??=</code> operator assigns a value <em>only if</em> the variable is currently null — handy for lazy defaults:</p>
+                <pre><code class="language-csharp">string? config = null;
+config ??= "default-settings";   // assigns because config was null
+config ??= "other";              // does nothing — config is no longer null
+Console.WriteLine(config);       // default-settings</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ The everyday combo</h4>
+                    <p><code>value?.Something ?? fallback</code> is one of the most useful idioms in C#: "get this member if the value exists, otherwise use a fallback." It replaces several lines of null-checking with one clear expression.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: Null-forgiving -->
+            <section id="forgiving" class="lesson-section">
+                <h2>The Null-Forgiving Operator</h2>
+                <p>Occasionally you know a value isn't null even though the compiler can't prove it. The <strong>null-forgiving operator</strong> <code>!</code> tells the compiler "trust me, this isn't null here," suppressing the warning:</p>
+
+                <pre><code class="language-csharp">string? GetName() =&gt; "Ada";   // always returns a value in practice
+
+string name = GetName()!;      // '!' — I promise this isn't null
+Console.WriteLine(name.Length);</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Use <code>!</code> sparingly — it's a promise, not a fix</h4>
+                    <p>The <code>!</code> operator only silences the warning; it does <strong>nothing</strong> at runtime. If you're wrong and the value <em>is</em> null, you're back to a <code>NullReferenceException</code>. Prefer a real null check whenever you can; reach for <code>!</code> only when you're genuinely certain and the compiler simply can't see it.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Practical patterns -->
+            <section id="practices" class="lesson-section">
+                <h2>Practical Patterns</h2>
+                <p>A few habits make nullable-aware code pleasant to write:</p>
+
+                <div class="card card-success">
+                    <h4>✅ Guard early with pattern matching</h4>
+                    <p>Combine null checks with the pattern matching from Lesson 3.2:</p>
+                    <pre><code class="language-csharp">void Greet(string? name)
+{
+    if (name is null)
+    {
+        Console.WriteLine("Hello, stranger!");
+        return;                          // early exit — 'name' is non-null after this
+    }
+    Console.WriteLine($"Hello, {name}!");   // no warning — guarded above
+}</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Initialize non-nullable properties</h4>
+                    <p>If a class has a non-nullable <code>string</code> property, the compiler wants to be sure it's never left null. Set it in a constructor, give it a default, or mark it <code>required</code> so callers must provide it:</p>
+                    <pre><code class="language-csharp">class User
+{
+    public required string Name { get; set; }   // callers must set it
+    public string? Bio { get; set; }            // optional — may be null
+}</code></pre>
+                </div>
+
+                <blockquote>
+                    <strong>💡 The mindset shift:</strong> Treat every nullable warning as the compiler pointing at a possible future crash. Either prove the value isn't null (a check), provide a fallback (<code>??</code>), or reconsider whether the reference should be nullable at all. This habit eliminates a whole class of bugs.
+                </blockquote>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Null-Safe Profile Printer</h3>
+                    <p><strong>Objective:</strong> Handle nullable data with <code>?.</code>, <code>??</code>, and guards.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>NullSafety</code>.</li>
+                        <li>Define <code>class Profile { public string Name; public string? Bio; public string? Website; }</code> (set <code>Name</code> via a constructor).</li>
+                        <li>Write <code>void Print(Profile? profile)</code> that: if <code>profile</code> is null, prints "No profile."; otherwise prints the name, the bio or "(no bio)" if null, and the website's length or 0 using <code>?.</code> and <code>??</code>.</li>
+                        <li>Call it with a full profile, a profile missing bio/website, and <code>null</code>.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">Print(new Profile("Ada") { Bio = "Mathematician", Website = "ada.dev" });
+Print(new Profile("Grace"));
+Print(null);
+
+void Print(Profile? profile)
+{
+    // TODO: guard against null profile
+    // TODO: print Name, Bio ?? "(no bio)", and Website?.Length ?? 0
+}
+
+class Profile
+{
+    public string Name;
+    public string? Bio;
+    public string? Website;
+    public Profile(string name) { Name = name; }
+}</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Start with <code>if (profile is null) { Console.WriteLine("No profile."); return; }</code>. Then <code>profile.Bio ?? "(no bio)"</code> for the bio, and <code>profile.Website?.Length ?? 0</code> for the website length.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">Print(new Profile("Ada") { Bio = "Mathematician", Website = "ada.dev" });
+Print(new Profile("Grace"));
+Print(null);
+
+void Print(Profile? profile)
+{
+    if (profile is null)
+    {
+        Console.WriteLine("No profile.");
+        return;
+    }
+
+    Console.WriteLine($"Name: {profile.Name}");
+    Console.WriteLine($"Bio: {profile.Bio ?? "(no bio)"}");
+    Console.WriteLine($"Website length: {profile.Website?.Length ?? 0}");
+    Console.WriteLine("---");
+}
+
+class Profile
+{
+    public string Name;
+    public string? Bio;
+    public string? Website;
+    public Profile(string name) { Name = name; }
+}</code></pre>
+                        <p>Output:</p>
+                        <pre><code>Name: Ada
+Bio: Mathematician
+Website length: 7
+---
+Name: Grace
+Bio: (no bio)
+Website length: 0
+---
+No profile.</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What's the difference between <code>string</code> and <code>string?</code> in a nullable-aware project?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! string? signals it may be null (compiler enforces checks); string signals it shouldn't be.">
+                                A) <code>string?</code> may be null (checks required); <code>string</code> should never be null.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="They're both strings; the ? is about nullability, not a different type of text.">
+                                B) <code>string?</code> holds numbers and <code>string</code> holds text.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="There is a real, compiler-enforced difference.">
+                                C) There's no difference at all.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does <code>name?.Length</code> evaluate to when <code>name</code> is null?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The whole point of ?. is to avoid the crash.">
+                                A) It throws a <code>NullReferenceException</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! ?. short-circuits to null when the left side is null, instead of crashing.">
+                                B) <code>null</code> — the expression short-circuits safely.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't default to 0 on its own — you'd add ?? 0 for that.">
+                                C) <code>0</code>.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does the null-forgiving operator <code>!</code> (as in <code>value!</code>) actually do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It changes nothing at runtime — it's not a real null check.">
+                                A) Guarantees at runtime that the value isn't null.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! It only silences the compiler warning; if the value is actually null, you'll still crash.">
+                                B) Suppresses the compiler's null warning — but does nothing at runtime.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's not logical NOT in this position; after a value it's null-forgiving.">
+                                C) Reverses a boolean value.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>Using a <code>null</code> reference throws a <code>NullReferenceException</code>; nullable reference types help catch this at compile time.</li>
+                        <li><code>string</code> means "shouldn't be null"; <code>string?</code> means "may be null" — and the compiler enforces a check before use.</li>
+                        <li><code>?.</code> safely accesses members (null if the left is null); <code>??</code> supplies a fallback; <code>??=</code> assigns only when null.</li>
+                        <li>The idiom <code>value?.Member ?? fallback</code> handles null in one clean line.</li>
+                        <li>The null-forgiving <code>!</code> only silences the warning — use it rarely; prefer real checks, guards, <code>required</code> members, or defaults.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/nullable-references" target="_blank" rel="noopener">Nullable reference types — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/null-coalescing-operator" target="_blank" rel="noopener">?? and ??= operators — reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/member-access-operators#null-conditional-operators--and-" target="_blank" rel="noopener">Null-conditional operators ?. and ?[] — reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>That completes <strong>Module 3</strong> — your C# is now modern, concise, and null-safe! In <strong>Module 4</strong>, your programs start interacting with the outside world. First up: <strong>Lesson 4.1: Working with Files and Streams</strong>, where data finally outlives the program run.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Module 3 complete!</h3>
+                    <p>Records, patterns, and null-safety make your code clean and robust. Next: reading and writing real data.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_08.html" class="prev-lesson">← Previous: Lesson 3.2 — Pattern Matching</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_10.html" class="next-lesson">Next: Lesson 4.1 — Working with Files and Streams →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Write expressive, concise conditionals in C# with pattern matching: type, property, relational, logical, and tuple patterns.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 3.2: Pattern Matching - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 3: Modern Language Features</a></li>
+            <li aria-current="page">Lesson 3.2: Pattern Matching</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 3.2: Pattern Matching</h1>
+                <p class="lead">Pattern matching lets you test the shape and content of data — its type, its properties, its values — in remarkably concise ways. It turns sprawling <code>if</code>/<code>else</code> chains into clear, expressive code.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Use type patterns with <code>is</code> to test and cast in one step</li>
+                        <li>Write <code>switch</code> expressions that return values</li>
+                        <li>Match on properties, ranges (relational), and combinations (logical)</li>
+                        <li>Match and deconstruct tuples and records</li>
+                        <li>Recognize when pattern matching makes code clearer</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Replace tangled conditionals with clean pattern-matching code.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is Pattern Matching?</a></li>
+                        <li><a href="#type-patterns" class="toc-link">Type Patterns with <code>is</code></a></li>
+                        <li><a href="#switch-expr" class="toc-link">Switch Expressions</a></li>
+                        <li><a href="#relational" class="toc-link">Relational &amp; Logical Patterns</a></li>
+                        <li><a href="#property" class="toc-link">Property Patterns</a></li>
+                        <li><a href="#tuple" class="toc-link">Tuple Patterns</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is pattern matching -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is Pattern Matching?</h2>
+                <p>You already know the basic <code>switch</code> from the intro course, which matched a value against constant cases. <strong>Pattern matching</strong> is a big upgrade: instead of only "is this value equal to X?", you can ask "does this value <em>match this shape</em>?" — its type, a property, a range, or a combination.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Pattern matching:</strong> testing whether a value matches a <em>pattern</em> — a description of a type, structure, or condition — often extracting data from it at the same time.</p>
+                </div>
+
+                <p>The payoff is code that reads like the rules it implements. Compare a nested <code>if</code> chain with a pattern-based <code>switch</code> expression:</p>
+                <pre><code class="language-csharp">// Before: nested if/else
+string Describe(int n)
+{
+    if (n &lt; 0) return "negative";
+    else if (n == 0) return "zero";
+    else if (n &lt; 10) return "small";
+    else return "large";
+}
+
+// After: a switch expression with patterns
+string Describe(int n) =&gt; n switch
+{
+    &lt; 0  =&gt; "negative",
+    0    =&gt; "zero",
+    &lt; 10 =&gt; "small",
+    _    =&gt; "large"
+};</code></pre>
+            </section>
+
+            <!-- Section 2: Type patterns -->
+            <section id="type-patterns" class="lesson-section">
+                <h2>Type Patterns with <code>is</code></h2>
+                <p>The <code>is</code> operator tests whether a value is a particular type — and can assign it to a new variable in the same step, so you don't cast separately:</p>
+
+                <pre><code class="language-csharp">object value = "hello";
+
+if (value is string text)     // is it a string? if so, put it in 'text'
+{
+    Console.WriteLine(text.ToUpper());   // HELLO — 'text' is a real string here
+}</code></pre>
+
+                <p>This is much cleaner than the old test-then-cast dance. It shines when handling values that could be one of several types (recall polymorphism from the intro):</p>
+
+                <pre><code class="language-csharp">void Print(object item)
+{
+    if (item is int n)
+    {
+        Console.WriteLine($"An integer: {n}");
+    }
+    else if (item is string s)
+    {
+        Console.WriteLine($"A string of length {s.Length}");
+    }
+    else
+    {
+        Console.WriteLine("Something else");
+    }
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Combine with <code>not</code></h4>
+                    <p>A very common, readable null check uses the <code>is</code> pattern: <code>if (item is not null) { ... }</code>. You'll see this style everywhere in modern C#.</p>
+                </div>
+            </section>
+
+            <!-- Section 3: switch expressions -->
+            <section id="switch-expr" class="lesson-section">
+                <h2>Switch Expressions</h2>
+                <p>A <strong>switch expression</strong> (introduced in the intro course) <em>produces a value</em>, and it's where pattern matching really shines. Its arms use <code>pattern =&gt; result</code>, and <code>_</code> is the catch-all:</p>
+
+                <pre><code class="language-csharp">string DescribeType(object item) =&gt; item switch
+{
+    int n        =&gt; $"int: {n}",
+    string s     =&gt; $"string: {s}",
+    bool b       =&gt; $"bool: {b}",
+    null         =&gt; "null",
+    _            =&gt; "unknown"
+};
+
+Console.WriteLine(DescribeType(42));      // int: 42
+Console.WriteLine(DescribeType("hi"));    // string: hi
+Console.WriteLine(DescribeType(true));    // bool: True</code></pre>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Handle every case (exhaustiveness)</h4>
+                    <p>A switch expression must produce a value for <em>any</em> input. If no arm matches and there's no <code>_</code>, it throws at runtime. Including a <code>_</code> catch-all arm keeps your switch exhaustive and safe.</p>
+                </div>
+
+                <div class="mermaid">
+                    graph LR
+                    A["value"] --> S{"switch<br/>which pattern?"}
+                    S -->|"int n"| R1["int result"]
+                    S -->|"string s"| R2["string result"]
+                    S -->|"_ (any)"| R3["default result"]
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style R1 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style R2 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                    style R3 fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 4: Relational and logical -->
+            <section id="relational" class="lesson-section">
+                <h2>Relational &amp; Logical Patterns</h2>
+                <p><strong>Relational patterns</strong> match against ranges using <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>. <strong>Logical patterns</strong> combine patterns with <code>and</code>, <code>or</code>, and <code>not</code>. Together they express ranges beautifully:</p>
+
+                <pre><code class="language-csharp">string Grade(int score) =&gt; score switch
+{
+    &gt;= 90        =&gt; "A",
+    &gt;= 80        =&gt; "B",
+    &gt;= 70        =&gt; "C",
+    &gt;= 60        =&gt; "D",
+    _            =&gt; "F"
+};
+
+string Category(int age) =&gt; age switch
+{
+    &lt; 0            =&gt; "invalid",
+    &gt;= 0 and &lt; 13  =&gt; "child",       // 'and' combines two relational patterns
+    &gt;= 13 and &lt; 20 =&gt; "teenager",
+    _              =&gt; "adult"
+};
+
+Console.WriteLine(Grade(85));       // B
+Console.WriteLine(Category(15));    // teenager</code></pre>
+
+                <div class="card card-success">
+                    <h4>✅ Remember the grade example?</h4>
+                    <p>In the intro course you wrote grades as an <code>if</code>/<code>else if</code> chain. The relational-pattern version above does the same thing, but the intent — a set of ranges — is far more visible at a glance. That's the whole appeal of pattern matching.</p>
+                </div>
+
+                <p>Logical <code>or</code> and <code>not</code> are handy too:</p>
+                <pre><code class="language-csharp">bool IsWeekend(string day) =&gt; day switch
+{
+    "Saturday" or "Sunday" =&gt; true,
+    _                      =&gt; false
+};</code></pre>
+            </section>
+
+            <!-- Section 5: Property patterns -->
+            <section id="property" class="lesson-section">
+                <h2>Property Patterns</h2>
+                <p><strong>Property patterns</strong> match against an object's properties using braces. This lets you branch on the <em>contents</em> of an object, not just its type:</p>
+
+                <pre><code class="language-csharp">record Order(string Product, int Quantity, decimal Total);
+
+string Classify(Order order) =&gt; order switch
+{
+    { Total: &gt; 1000m }           =&gt; "big order",
+    { Quantity: &gt; 100 }          =&gt; "bulk order",
+    { Product: "Gift Card" }     =&gt; "gift card",
+    _                            =&gt; "standard order"
+};
+
+Console.WriteLine(Classify(new Order("Laptop", 1, 1500m)));   // big order
+Console.WriteLine(Classify(new Order("Pen", 500, 250m)));     // bulk order</code></pre>
+
+                <p>You can nest and combine them, and even capture a value with <code>var</code> for use in the result:</p>
+                <pre><code class="language-csharp">string Ship(Order order) =&gt; order switch
+{
+    { Total: &gt; 500m }                    =&gt; "free express shipping",
+    { Quantity: &gt; 1, Product: var p }    =&gt; $"standard shipping for {p}",
+    _                                    =&gt; "standard shipping"
+};</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Pairs perfectly with records</h4>
+                    <p>Property patterns and records (Lesson 3.1) are natural partners: records give you clean, immutable data, and property patterns let you branch on that data expressively.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: Tuple patterns -->
+            <section id="tuple" class="lesson-section">
+                <h2>Tuple Patterns</h2>
+                <p>You can switch on <em>multiple values at once</em> by grouping them in a tuple. This is perfect for decisions that depend on a combination of inputs:</p>
+
+                <pre><code class="language-csharp">string Rps(string player, string opponent) =&gt; (player, opponent) switch
+{
+    ("rock", "scissors")     =&gt; "win",
+    ("paper", "rock")        =&gt; "win",
+    ("scissors", "paper")    =&gt; "win",
+    (var a, var b) when a == b =&gt; "tie",   // 'when' adds an extra condition
+    _                        =&gt; "lose"
+};
+
+Console.WriteLine(Rps("rock", "scissors"));   // win
+Console.WriteLine(Rps("rock", "rock"));       // tie
+Console.WriteLine(Rps("rock", "paper"));      // lose</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 The <code>when</code> guard</h4>
+                    <p>A <code>when</code> clause adds an arbitrary boolean condition to a pattern arm — useful when the pattern alone can't express the rule (like "the two values are equal"). Use it sparingly; often a more specific pattern is clearer.</p>
+                </div>
+
+                <p>Records deconstruct into tuple-like patterns too, so you can match their parts directly:</p>
+                <pre><code class="language-csharp">record Point(int X, int Y);
+
+string Where(Point p) =&gt; p switch
+{
+    (0, 0)            =&gt; "origin",
+    (var x, 0)        =&gt; $"on X axis at {x}",
+    (0, var y)        =&gt; $"on Y axis at {y}",
+    _                 =&gt; "somewhere else"
+};
+
+Console.WriteLine(Where(new Point(0, 0)));   // origin
+Console.WriteLine(Where(new Point(5, 0)));   // on X axis at 5</code></pre>
+            </section>
+
+            <!-- Section 7: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Fare Calculator</h3>
+                    <p><strong>Objective:</strong> Use switch expressions with relational, logical, and property patterns.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>Patterns</code>.</li>
+                        <li>Write <code>string TicketPrice(int age)</code> using a switch expression: under 5 → "free", 5–17 → "child", 18–64 → "adult", 65+ → "senior". Use relational and logical patterns.</li>
+                        <li>Define <code>record Passenger(int Age, bool HasPass);</code> and write <code>decimal Fare(Passenger p)</code> using <strong>property patterns</strong>: anyone with <code>HasPass = true</code> pays 0; otherwise under 18 pays 5m; otherwise 10m.</li>
+                        <li>Test each with a few values.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">Console.WriteLine(TicketPrice(3));    // free
+Console.WriteLine(TicketPrice(40));   // adult
+Console.WriteLine(Fare(new Passenger(30, true)));   // 0
+Console.WriteLine(Fare(new Passenger(12, false)));  // 5
+
+record Passenger(int Age, bool HasPass);
+
+string TicketPrice(int age) =&gt; age switch
+{
+    // TODO: relational/logical pattern arms
+};
+
+decimal Fare(Passenger p) =&gt; p switch
+{
+    // TODO: property pattern arms
+};</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>For ranges: <code>&lt; 5 =&gt; "free"</code>, <code>&gt;= 5 and &lt;= 17 =&gt; "child"</code>, etc. For property patterns: <code>{ HasPass: true } =&gt; 0m</code>, then <code>{ Age: &lt; 18 } =&gt; 5m</code>, then <code>_ =&gt; 10m</code>. Order matters — the first match wins.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">Console.WriteLine(TicketPrice(3));    // free
+Console.WriteLine(TicketPrice(40));   // adult
+Console.WriteLine(Fare(new Passenger(30, true)));   // 0
+Console.WriteLine(Fare(new Passenger(12, false)));  // 5
+
+record Passenger(int Age, bool HasPass);
+
+string TicketPrice(int age) =&gt; age switch
+{
+    &lt; 5              =&gt; "free",
+    &gt;= 5 and &lt;= 17   =&gt; "child",
+    &gt;= 18 and &lt;= 64  =&gt; "adult",
+    _               =&gt; "senior"
+};
+
+decimal Fare(Passenger p) =&gt; p switch
+{
+    { HasPass: true } =&gt; 0m,
+    { Age: &lt; 18 }     =&gt; 5m,
+    _                =&gt; 10m
+};</code></pre>
+                        <p>Output:</p>
+                        <pre><code>free
+adult
+0
+5</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does <code>if (value is string text)</code> do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! It tests whether value is a string and, if so, assigns it to text in one step.">
+                                A) Tests if <code>value</code> is a <code>string</code> and, if so, assigns it to <code>text</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It doesn't convert every value to text — it tests the type.">
+                                B) Converts <code>value</code> into a string named <code>text</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="'is' checks type/patterns, not equality of contents.">
+                                C) Checks whether <code>value</code> equals the word "text".
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> In a switch expression, what does the <code>_</code> arm represent?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It's not about empty or null specifically.">
+                                A) The empty or null case only.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! _ is the catch-all (discard) that matches anything not matched above.">
+                                B) The catch-all that matches anything not matched above.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's a fallback, not the first-checked arm.">
+                                C) The first arm that's always checked.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> Which pattern matches an <code>Order</code> whose <code>Total</code> is over 1000?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That's a relational pattern on a bare value, not on a property.">
+                                A) <code>&gt; 1000m</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! A property pattern uses braces: { Total: > 1000m }.">
+                                B) <code>{ Total: &gt; 1000m }</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Square brackets aren't property-pattern syntax.">
+                                C) <code>[Total &gt; 1000m]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 8: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Pattern matching</strong> tests a value's type, structure, or condition — often extracting data at the same time.</li>
+                        <li>The <code>is</code> <strong>type pattern</strong> tests and casts in one step (<code>value is string text</code>); <code>is not null</code> is a common idiom.</li>
+                        <li><strong>Switch expressions</strong> return a value; include a <code>_</code> arm to stay exhaustive.</li>
+                        <li><strong>Relational</strong> (<code>&gt;=</code>) and <strong>logical</strong> (<code>and</code>/<code>or</code>/<code>not</code>) patterns express ranges clearly; <strong>property patterns</strong> (<code>{ Total: &gt; 1000m }</code>) branch on contents.</li>
+                        <li><strong>Tuple patterns</strong> match multiple values at once; a <code>when</code> guard adds an extra condition. Patterns pair beautifully with records.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/functional/pattern-matching" target="_blank" rel="noopener">Pattern matching — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/patterns" target="_blank" rel="noopener">Patterns — C# reference</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/operators/switch-expression" target="_blank" rel="noopener">switch expression — reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You've made conditionals concise and safe. Next, we tackle one of the most common sources of runtime crashes head-on. In <strong>Lesson 3.3: Nullable Reference Types</strong>, you'll let the compiler help you avoid <code>null</code> errors before they happen.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Patterns mastered!</h3>
+                    <p>Your conditionals are now expressive and safe. Next: taming <code>null</code>.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="lesson_07.html" class="prev-lesson">← Previous: Lesson 3.1 — Records and Value Equality</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_09.html" class="next-lesson">Next: Lesson 3.3 — Nullable Reference Types →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>
