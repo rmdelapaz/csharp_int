@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Handle runtime errors gracefully in C# with try, catch, finally, throwing exceptions, and custom exception types.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Lesson 1.1: Exception Handling - Intermediate C#</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid — initialized by course-enhancements.js for theme awareness -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        // Initial config — JS will re-init on theme change
+        const isDark = localStorage.getItem('theme') === 'dark' ||
+            (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: isDark ? 'dark' : 'default',
+            themeVariables: isDark
+                ? { primaryColor: '#334155', primaryTextColor: '#e2e8f0', primaryBorderColor: '#6366f1', lineColor: '#94a3b8', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' }
+                : { primaryColor: '#eff6ff', primaryTextColor: '#1e293b', primaryBorderColor: '#3b82f6', lineColor: '#64748b', secondaryColor: '#f8fafc', tertiaryColor: '#f1f5f9' }
+        });
+    </script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html#modules">Module 1: Writing Robust Code</a></li>
+            <li aria-current="page">Lesson 1.1: Exception Handling</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Lesson Header -->
+            <header>
+                <h1>📝 Lesson 1.1: Exception Handling</h1>
+                <p class="lead">Real programs meet real problems: missing files, bad input, dropped connections. In this lesson you'll learn to catch these errors and respond gracefully — instead of letting your program crash.</p>
+
+                <!-- Learning objectives -->
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what an exception is and when one is thrown</li>
+                        <li>Handle errors with <code>try</code>, <code>catch</code>, and <code>finally</code></li>
+                        <li>Catch specific exception types in the right order</li>
+                        <li>Throw exceptions with <code>throw</code>, including your own custom types</li>
+                        <li>Follow best practices for robust error handling</li>
+                    </ul>
+                    <p><strong>Estimated Time:</strong> 60 minutes</p>
+                    <p><strong>Project:</strong> Make a fragile program resilient with proper exception handling.</p>
+                </div>
+            </header>
+
+            <!-- Sticky Table of Contents -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#introduction" class="toc-link">What Is an Exception?</a></li>
+                        <li><a href="#try-catch" class="toc-link">try and catch</a></li>
+                        <li><a href="#specific" class="toc-link">Catching Specific Exceptions</a></li>
+                        <li><a href="#finally" class="toc-link">The finally Block</a></li>
+                        <li><a href="#throw" class="toc-link">Throwing Exceptions</a></li>
+                        <li><a href="#custom" class="toc-link">Custom Exceptions</a></li>
+                        <li><a href="#best" class="toc-link">Best Practices</a></li>
+                        <li><a href="#exercise" class="toc-link">Exercise &amp; Quiz</a></li>
+                        <li><a href="#summary" class="toc-link">Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- Section 1: What is an exception -->
+            <section id="introduction" class="lesson-section">
+                <h2>What Is an Exception?</h2>
+                <p>An <strong>exception</strong> is C#'s way of signaling that something went wrong <em>at runtime</em> — a problem the compiler couldn't catch, but that stops normal execution. You met one in the intro course: calling <code>int.Parse("hello")</code> throws a <code>FormatException</code> and crashes the program.</p>
+
+                <div class="card card-accent">
+                    <h4>📖 Definition</h4>
+                    <p><strong>Exception:</strong> an object representing an error that occurs while a program runs. When code <em>throws</em> an exception, normal flow stops and C# looks for code that will <em>handle</em> it.</p>
+                </div>
+
+                <p>When an exception is thrown and nothing handles it, it travels up the call stack until it reaches the top and terminates the program with an error message. <strong>Exception handling</strong> lets you intercept that and decide what to do instead.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Exceptions vs. the <code>TryParse</code> pattern</h4>
+                    <p>In the intro course you used <code>int.TryParse</code> to <em>avoid</em> a crash. That's ideal for <strong>expected</strong> situations like user typos. Exceptions are for <strong>exceptional</strong> problems — a missing file, a failed network call — where a crash would otherwise be the only outcome. This lesson gives you the general tool.</p>
+                </div>
+            </section>
+
+            <!-- Section 2: try and catch -->
+            <section id="try-catch" class="lesson-section">
+                <h2><code>try</code> and <code>catch</code></h2>
+                <p>You wrap risky code in a <code>try</code> block. If it throws, control jumps to the matching <code>catch</code> block instead of crashing:</p>
+
+                <pre><code class="language-csharp">try
+{
+    Console.Write("Enter a number: ");
+    int number = int.Parse(Console.ReadLine());
+    Console.WriteLine($"You entered {number}.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Something went wrong: {ex.Message}");
+}
+
+Console.WriteLine("The program continues normally.");</code></pre>
+
+                <p>If the user types <code>abc</code>, <code>int.Parse</code> throws. Instead of crashing, the <code>catch</code> runs and the program keeps going:</p>
+                <div class="card card-output">
+                    <h4>Sample run (user types "abc"):</h4>
+                    <pre><code>Enter a number: abc
+Something went wrong: The input string 'abc' was not in a correct format.
+The program continues normally.</code></pre>
+                </div>
+
+                <p>The <code>catch (Exception ex)</code> captures the exception object in <code>ex</code>. Its most useful member is <code>ex.Message</code>, a human-readable description of what happened.</p>
+
+                <div class="mermaid">
+                    graph TD
+                    A["Enter try block"] --> B["Run risky code"]
+                    B --> C{"Exception<br/>thrown?"}
+                    C -->|"No"| D["Skip catch"]
+                    C -->|"Yes"| E["Jump to catch block"]
+                    D --> F["Continue program"]
+                    E --> F
+                    style A fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+                    style F fill:#e8f5e9,stroke:#4CAF50,stroke-width:2px
+                </div>
+            </section>
+
+            <!-- Section 3: specific exceptions -->
+            <section id="specific" class="lesson-section">
+                <h2>Catching Specific Exceptions</h2>
+                <p>Catching the broad <code>Exception</code> type works, but it treats every problem the same way. Usually you want to react differently to different failures. C# lets you write <strong>multiple catch blocks</strong>, each for a specific exception type:</p>
+
+                <pre><code class="language-csharp">try
+{
+    int[] numbers = { 1, 2, 3 };
+    Console.Write("Enter an index: ");
+    int i = int.Parse(Console.ReadLine());
+    Console.WriteLine($"Value: {numbers[i]}");
+}
+catch (FormatException)
+{
+    Console.WriteLine("That wasn't a valid whole number.");
+}
+catch (IndexOutOfRangeException)
+{
+    Console.WriteLine("That index is outside the array.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Unexpected error: {ex.Message}");
+}</code></pre>
+
+                <p>C# checks the catch blocks top to bottom and runs the <strong>first</strong> one whose type matches the thrown exception.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Order matters: specific before general</h4>
+                    <p>Because the first match wins, list <strong>specific</strong> exception types before the general <code>Exception</code>. If <code>catch (Exception)</code> came first, it would catch <em>everything</em> and the specific blocks below it would be unreachable — the compiler will actually flag this as an error.</p>
+                </div>
+
+                <p>Here are some exception types you'll meet often:</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Exception</th><th>Typically thrown when…</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>FormatException</code></td><td>Parsing text that isn't in the expected format</td></tr>
+                            <tr><td><code>IndexOutOfRangeException</code></td><td>Using an array index that doesn't exist</td></tr>
+                            <tr><td><code>NullReferenceException</code></td><td>Using a reference that is <code>null</code></td></tr>
+                            <tr><td><code>FileNotFoundException</code></td><td>Opening a file that isn't there</td></tr>
+                            <tr><td><code>DivideByZeroException</code></td><td>Dividing an integer by zero</td></tr>
+                            <tr><td><code>ArgumentException</code></td><td>A method receives an invalid argument</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 4: finally -->
+            <section id="finally" class="lesson-section">
+                <h2>The <code>finally</code> Block</h2>
+                <p>A <code>finally</code> block runs <strong>no matter what</strong> — whether the <code>try</code> succeeded, threw an exception, or the exception was caught. It's the place for cleanup that must always happen, like closing a file or releasing a resource:</p>
+
+                <pre><code class="language-csharp">try
+{
+    Console.WriteLine("Opening resource...");
+    int result = 10 / int.Parse("0");   // throws DivideByZeroException
+    Console.WriteLine(result);          // skipped
+}
+catch (DivideByZeroException)
+{
+    Console.WriteLine("Cannot divide by zero.");
+}
+finally
+{
+    Console.WriteLine("Cleaning up (always runs).");
+}</code></pre>
+
+                <div class="card card-output">
+                    <h4>Output:</h4>
+                    <pre><code>Opening resource...
+Cannot divide by zero.
+Cleaning up (always runs).</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 <code>using</code> is often better for cleanup</h4>
+                    <p>For objects that implement <code>IDisposable</code> (files, connections), C#'s <code>using</code> statement automatically disposes them even if an exception occurs — a cleaner alternative to a manual <code>finally</code>. You'll use <code>using</code> in Module 4 when working with files.</p>
+                </div>
+            </section>
+
+            <!-- Section 5: throw -->
+            <section id="throw" class="lesson-section">
+                <h2>Throwing Exceptions</h2>
+                <p>You can raise exceptions yourself with the <code>throw</code> keyword. This is how a method signals that it was given something it can't work with — pushing the problem to the caller rather than silently continuing with bad data:</p>
+
+                <pre><code class="language-csharp">decimal Withdraw(decimal balance, decimal amount)
+{
+    if (amount &lt;= 0)
+    {
+        throw new ArgumentException("Amount must be positive.");
+    }
+    if (amount &gt; balance)
+    {
+        throw new InvalidOperationException("Insufficient funds.");
+    }
+    return balance - amount;
+}</code></pre>
+
+                <p>The caller decides how to respond by wrapping the call in <code>try</code>/<code>catch</code>:</p>
+                <pre><code class="language-csharp">try
+{
+    decimal newBalance = Withdraw(100m, 250m);
+    Console.WriteLine($"New balance: {newBalance:C}");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"Transaction declined: {ex.Message}");
+}</code></pre>
+
+                <div class="card card-output">
+                    <h4>Output:</h4>
+                    <pre><code>Transaction declined: Insufficient funds.</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Throw early, throw clearly</h4>
+                    <p>Validate inputs at the start of a method and <code>throw</code> immediately with a clear message if something's wrong. This "fail fast" habit keeps bad data from spreading deeper into your program where it's harder to diagnose.</p>
+                </div>
+            </section>
+
+            <!-- Section 6: custom exceptions -->
+            <section id="custom" class="lesson-section">
+                <h2>Custom Exceptions</h2>
+                <p>Sometimes the built-in exception types don't describe your problem well. You can define your own by creating a class that derives from <code>Exception</code> — a direct use of the inheritance you learned in the intro course:</p>
+
+                <pre><code class="language-csharp">class InsufficientFundsException : Exception
+{
+    public InsufficientFundsException(string message) : base(message)
+    {
+    }
+}</code></pre>
+
+                <p>Now you can throw and catch it by name, making your intent crystal clear:</p>
+                <pre><code class="language-csharp">decimal Withdraw(decimal balance, decimal amount)
+{
+    if (amount &gt; balance)
+    {
+        throw new InsufficientFundsException(
+            $"Tried to withdraw {amount:C} but only {balance:C} available.");
+    }
+    return balance - amount;
+}
+
+try
+{
+    Withdraw(100m, 250m);
+}
+catch (InsufficientFundsException ex)
+{
+    Console.WriteLine($"Declined: {ex.Message}");
+}</code></pre>
+
+                <div class="card card-info">
+                    <h4>💡 Why bother?</h4>
+                    <p>A custom exception type lets callers catch <em>exactly</em> the error they care about, and the type name itself documents what went wrong. By convention, custom exception class names end in <code>Exception</code>, and they pass their message up to the base with <code>: base(message)</code>.</p>
+                </div>
+            </section>
+
+            <!-- Section 7: best practices -->
+            <section id="best" class="lesson-section">
+                <h2>Best Practices</h2>
+
+                <div class="card card-success">
+                    <h4>✅ Do</h4>
+                    <ul>
+                        <li><strong>Catch specific exceptions</strong> you can actually handle, not just <code>Exception</code>.</li>
+                        <li><strong>Use the message.</strong> Log or display <code>ex.Message</code> so problems are diagnosable.</li>
+                        <li><strong>Clean up</strong> with <code>finally</code> or (better) <code>using</code>.</li>
+                        <li><strong>Validate and throw early</strong> with clear messages.</li>
+                    </ul>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>❌ Don't</h4>
+                    <ul>
+                        <li><strong>Don't swallow exceptions silently.</strong> An empty <code>catch { }</code> hides bugs and makes failures invisible — one of the most damaging habits in programming.</li>
+                        <li><strong>Don't use exceptions for normal flow.</strong> For expected cases (like validating user input), prefer checks such as <code>TryParse</code>; exceptions are comparatively expensive and obscure intent.</li>
+                        <li><strong>Don't catch what you can't handle.</strong> If a block can't do anything useful about an error, let it propagate to code that can.</li>
+                    </ul>
+                </div>
+
+                <blockquote>
+                    <strong>💡 The mindset:</strong> Exception handling isn't about making errors disappear — it's about responding to them <em>deliberately</em>. A good handler either fixes the situation, informs the user, or logs the problem and re-raises it.
+                </blockquote>
+            </section>
+
+            <!-- Section 8: Exercise & Quiz -->
+            <section id="exercise" class="lesson-section">
+                <h2>Exercise &amp; Quiz</h2>
+
+                <div class="card card-info">
+                    <h3>🏋️ Exercise: A Safe Division Tool</h3>
+                    <p><strong>Objective:</strong> Use multiple catch blocks, <code>finally</code>, and a custom exception.</p>
+
+                    <h4>Instructions:</h4>
+                    <ol>
+                        <li>Create a new project called <code>SafeDivide</code>.</li>
+                        <li>Ask the user for two integers and divide the first by the second.</li>
+                        <li>Wrap it in <code>try</code>/<code>catch</code> handling <code>FormatException</code> (bad input) and <code>DivideByZeroException</code> (dividing by zero) with distinct messages.</li>
+                        <li>Add a <code>finally</code> block that prints "Calculation attempt finished."</li>
+                        <li><strong>Bonus:</strong> Write a method <code>int Divide(int a, int b)</code> that <code>throw</code>s an <code>ArgumentException</code> if <code>b</code> is zero, and call it inside the try.</li>
+                    </ol>
+
+                    <h4>Starter Code:</h4>
+                    <pre><code class="language-csharp">try
+{
+    Console.Write("Numerator: ");
+    int a = int.Parse(Console.ReadLine());
+    Console.Write("Denominator: ");
+    int b = int.Parse(Console.ReadLine());
+
+    Console.WriteLine($"Result: {a / b}");
+}
+// TODO: catch FormatException
+// TODO: catch DivideByZeroException
+// TODO: finally block</code></pre>
+
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>List the specific catches (<code>FormatException</code>, <code>DivideByZeroException</code>) before any general <code>catch (Exception)</code>. The <code>finally</code> block goes last and always runs. For the bonus, <code>throw new ArgumentException("...")</code> inside <code>Divide</code> when <code>b == 0</code>.</p>
+                    </details>
+
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-csharp">try
+{
+    Console.Write("Numerator: ");
+    int a = int.Parse(Console.ReadLine());
+    Console.Write("Denominator: ");
+    int b = int.Parse(Console.ReadLine());
+
+    Console.WriteLine($"Result: {Divide(a, b)}");
+}
+catch (FormatException)
+{
+    Console.WriteLine("Please enter valid whole numbers.");
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Bad argument: {ex.Message}");
+}
+catch (DivideByZeroException)
+{
+    Console.WriteLine("You can't divide by zero.");
+}
+finally
+{
+    Console.WriteLine("Calculation attempt finished.");
+}
+
+int Divide(int a, int b)
+{
+    if (b == 0)
+    {
+        throw new ArgumentException("Denominator cannot be zero.");
+    }
+    return a / b;
+}</code></pre>
+                        <p>Sample run:</p>
+                        <pre><code>Numerator: 10
+Denominator: 0
+Bad argument: Denominator cannot be zero.
+Calculation attempt finished.</code></pre>
+                    </details>
+                </div>
+
+                <!-- Quiz Section -->
+                <div class="card quiz-container">
+                    <h3>🎯 Quick Quiz</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What happens to code after the failing line inside a <code>try</code> block once an exception is thrown?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Execution doesn't just continue on the next line inside the try.">
+                                A) It keeps running normally.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! Control jumps out of the try to the matching catch block; the rest of the try is skipped.">
+                                B) It's skipped — control jumps to the matching <code>catch</code>.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A handled exception doesn't terminate the program.">
+                                C) The whole program always terminates immediately.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Why must specific catch blocks come before <code>catch (Exception)</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! The first matching catch wins, so a general catch first would make specific ones unreachable.">
+                                A) The first matching catch runs, so a general one first would block the specific ones.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's about match order, not speed.">
+                                B) Specific catches run faster.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Order is required for correctness, not just style.">
+                                C) It's only a style preference with no real effect.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> When does a <code>finally</code> block run?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="It's not limited to the error case.">
+                                A) Only when an exception is thrown.
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It's not limited to the success case either.">
+                                B) Only when no exception occurs.
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Correct! finally runs whether or not an exception was thrown — ideal for cleanup.">
+                                C) Always — whether or not an exception was thrown.
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 9: Summary -->
+            <section id="summary" class="lesson-section">
+                <h2>Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎉 Key Takeaways</h3>
+                    <ul>
+                        <li>An <strong>exception</strong> signals a runtime error; unhandled, it crashes the program.</li>
+                        <li>Wrap risky code in <code>try</code> and handle failures in <code>catch</code>; read <code>ex.Message</code> for details.</li>
+                        <li>Catch <strong>specific</strong> exception types before the general <code>Exception</code> — order matters.</li>
+                        <li><code>finally</code> always runs (great for cleanup); <code>using</code> is often cleaner for disposable resources.</li>
+                        <li>Use <code>throw</code> to raise exceptions (fail fast), and derive from <code>Exception</code> for custom types. Never silently swallow exceptions.</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Additional Resources</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/fundamentals/exceptions/" target="_blank" rel="noopener">Exceptions and exception handling — Microsoft Docs</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/exceptions/best-practices-for-exceptions" target="_blank" rel="noopener">Best practices for exceptions</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/language-reference/statements/exception-handling-statements" target="_blank" rel="noopener">try / catch / finally — reference</a></li>
+                </ul>
+
+                <h3>🚀 What's Next?</h3>
+                <p>You can now keep programs running through errors. Next, we make code reusable <em>and</em> type-safe at the same time. In <strong>Lesson 1.2: Generics</strong>, you'll write classes and methods that work with any type — the technology behind <code>List&lt;T&gt;</code> itself.</p>
+
+                <!-- Encouragement Card -->
+                <div class="card card-accent" style="text-align: center; padding: 2rem;">
+                    <h3>🎉 Robustness unlocked!</h3>
+                    <p>Your programs no longer fall over at the first surprise. Next up: generics.</p>
+                </div>
+            </section>
+
+            <!-- Lesson Navigation -->
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="index.html" class="prev-lesson">← Course Home</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="lesson_02.html" class="next-lesson">Next: Lesson 1.2 — Generics →</a>
+            </nav>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>

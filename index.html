@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A hands-on continuation of Introduction to C#: exceptions, generics, LINQ, modern language features, files & JSON, async, web APIs, and testing.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Intermediate C# - Home</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">Intermediate C#</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">
+                ☰
+            </button>
+            <div class="nav-links" id="nav-links">
+                <a href="#introduction">Introduction</a>
+                <a href="#modules">Modules</a>
+                <a href="#prerequisites">Prerequisites</a>
+                <a href="#resources">Resources</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ul>
+            <li aria-current="page">Home</li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <div class="container">
+            <!-- Hero Section -->
+            <header>
+                <h1>🎓 Welcome to Intermediate C#</h1>
+                <p class="lead">Take your C# from "I can write programs" to "I can build real, robust applications." This course builds directly on <em>Introduction to C#</em>, covering the tools and techniques professional developers use every day.</p>
+            </header>
+
+            <!-- Introduction Section -->
+            <section id="introduction" class="card">
+                <h2>📚 About This Course</h2>
+                <p>You already know variables, control flow, methods, collections, and object-oriented programming — including inheritance, interfaces, and polymorphism. This course picks up exactly where <strong>Introduction to C#</strong> left off and turns that foundation into practical, real-world skill.</p>
+                <p>You'll learn to handle errors gracefully, write reusable generic code, query data elegantly with LINQ, use modern C# language features, work with files and JSON, write asynchronous code, call web APIs, and test what you build — finishing with a capstone that pulls it all together.</p>
+
+                <h3>What You'll Learn</h3>
+                <ul>
+                    <li>Handle failures gracefully with exceptions, and write type-safe reusable code with generics</li>
+                    <li>Choose and use the right collection: dictionaries, sets, queues, and stacks</li>
+                    <li>Pass behavior around with delegates and lambdas, and react to events</li>
+                    <li>Query and transform data expressively with LINQ</li>
+                    <li>Write concise, null-safe code with records, pattern matching, and nullable reference types</li>
+                    <li>Read and write files, and serialize objects to and from JSON</li>
+                    <li>Keep applications responsive with <code>async</code>/<code>await</code></li>
+                    <li>Call web APIs with <code>HttpClient</code> and write unit tests for your code</li>
+                    <li>Combine everything into a complete, well-structured application</li>
+                </ul>
+
+                <h3>Who This Course Is For</h3>
+                <ul>
+                    <li>Learners who finished Introduction to C# (or equivalent)</li>
+                    <li>Developers comfortable with C# basics and OOP who want practical, job-ready skills</li>
+                    <li>Anyone ready to move from writing small programs to building real applications</li>
+                </ul>
+            </section>
+
+            <!-- Course Modules/Lessons -->
+            <section id="modules">
+                <h2>📖 Course Modules</h2>
+
+                <!-- Module 1 -->
+                <div class="card lesson-card">
+                    <h3>Module 1: Writing Robust Code</h3>
+                    <p>Handle failures gracefully and write reusable, type-safe code.</p>
+                    <ul>
+                        <li><a href="lesson_01.html" class="lesson-link">Lesson 1.1: Exception Handling</a></li>
+                        <li><a href="lesson_02.html" class="lesson-link">Lesson 1.2: Generics</a></li>
+                        <li><a href="lesson_03.html" class="lesson-link">Lesson 1.3: Collections in Depth</a></li>
+                    </ul>
+                </div>
+
+                <!-- Module 2 -->
+                <div class="card lesson-card">
+                    <h3>Module 2: Functional-Style C#</h3>
+                    <p>Pass behavior around with delegates, react to events, and query data with LINQ.</p>
+                    <ul>
+                        <li><a href="lesson_04.html" class="lesson-link">Lesson 2.1: Delegates and Lambdas</a></li>
+                        <li><a href="lesson_05.html" class="lesson-link">Lesson 2.2: Events</a></li>
+                        <li><a href="lesson_06.html" class="lesson-link">Lesson 2.3: LINQ</a></li>
+                    </ul>
+                </div>
+
+                <!-- Module 3 -->
+                <div class="card lesson-card">
+                    <h3>Module 3: Modern Language Features</h3>
+                    <p>Write concise, expressive, null-safe C# with records, pattern matching, and nullable reference types.</p>
+                    <ul>
+                        <li><a href="lesson_07.html" class="lesson-link">Lesson 3.1: Records and Value Equality</a></li>
+                        <li><a href="lesson_08.html" class="lesson-link">Lesson 3.2: Pattern Matching</a></li>
+                        <li><a href="lesson_09.html" class="lesson-link">Lesson 3.3: Nullable Reference Types</a></li>
+                    </ul>
+                </div>
+
+                <!-- Module 4 -->
+                <div class="card lesson-card">
+                    <h3>Module 4: Data and I/O</h3>
+                    <p>Read and write files, serialize to JSON, and keep apps responsive with async.</p>
+                    <ul>
+                        <li><a href="lesson_10.html" class="lesson-link">Lesson 4.1: Working with Files and Streams</a></li>
+                        <li><a href="lesson_11.html" class="lesson-link">Lesson 4.2: JSON Serialization</a></li>
+                        <li><a href="lesson_12.html" class="lesson-link">Lesson 4.3: Asynchronous Programming</a></li>
+                    </ul>
+                </div>
+
+                <!-- Module 5 -->
+                <div class="card lesson-card">
+                    <h3>Module 5: Real-World C# and Quality</h3>
+                    <p>Call web APIs, test your code, and build a complete application.</p>
+                    <ul>
+                        <li><a href="lesson_13.html" class="lesson-link">Lesson 5.1: Calling Web APIs with HttpClient</a></li>
+                        <li><a href="lesson_14.html" class="lesson-link">Lesson 5.2: Unit Testing</a></li>
+                        <li><a href="lesson_15.html" class="lesson-link">Lesson 5.3: Capstone Project</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Prerequisites Section -->
+            <section id="prerequisites" class="card">
+                <h2>✅ Prerequisites</h2>
+                <p>Before starting this course, you should be comfortable with:</p>
+                <ul>
+                    <li>C# fundamentals: variables, data types, operators, and console I/O</li>
+                    <li>Control flow (<code>if</code>/<code>switch</code>, loops) and writing methods</li>
+                    <li>Collections (arrays and <code>List&lt;T&gt;</code>)</li>
+                    <li>Object-oriented programming: classes, objects, inheritance, interfaces, and polymorphism</li>
+                </ul>
+                <p>All of this is covered in <strong>Introduction to C#</strong> — if any of it feels shaky, review it first.</p>
+
+                <h3>Required Software</h3>
+                <ul>
+                    <li>The <strong>.NET SDK</strong> (same setup as the intro course)</li>
+                    <li>A code editor: <strong>VS Code</strong> with the C# Dev Kit, or <strong>Visual Studio</strong></li>
+                </ul>
+            </section>
+
+            <!-- Resources Section -->
+            <section id="resources" class="card">
+                <h2>📚 Additional Resources</h2>
+
+                <h3>Official Documentation</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/" target="_blank" rel="noopener">Microsoft C# Documentation</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/linq/" target="_blank" rel="noopener">LINQ in C#</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/csharp/asynchronous-programming/" target="_blank" rel="noopener">Asynchronous programming</a></li>
+                </ul>
+
+                <h3>Useful Links</h3>
+                <ul>
+                    <li><a href="https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/" target="_blank" rel="noopener">System.Text.Json overview</a></li>
+                    <li><a href="https://learn.microsoft.com/dotnet/core/testing/" target="_blank" rel="noopener">Testing in .NET</a></li>
+                    <li><a href="https://dotnetfiddle.net/" target="_blank" rel="noopener">.NET Fiddle — run C# in your browser</a></li>
+                </ul>
+
+                <h3>Support</h3>
+                <p>If you have questions or need help:</p>
+                <ul>
+                    <li>Visit <a href="https://rays-home.netlify.app/contact" target="_blank" rel="noopener">the contact page</a></li>
+                    <li>Community Q&A: <a href="https://stackoverflow.com/questions/tagged/c%23" target="_blank" rel="noopener">Stack Overflow (C# tag)</a></li>
+                </ul>
+            </section>
+
+            <!-- Search Section -->
+            <section class="card">
+                <h2>🔍 Search Course Content</h2>
+                <div style="position: relative;">
+                    <input type="text" id="search-input" placeholder="Search lessons, topics, or keywords..."
+                           aria-label="Search course content">
+                    <div id="search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0;"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <p>&copy; 2026 Ray de la Paz. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+            <a href="https://rays-home.netlify.app/contact">Contact</a>
+            <a href="#" id="print-button">Print Page</a>
+        </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
+</body>
+</html>
